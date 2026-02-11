@@ -1,16 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Battle Arena</title>
+    <style>
+        /* Style rapide pour cacher le jeu au début */
+        #gameContainer { display: none; flex-direction: column; align-items: center; }
+        #menu { display: flex; flex-direction: column; align-items: center; margin-top: 50px; }
+    </style>
 </head>
-
 <body>
-    <canvas id="gameCanvas" width="400" height="400"></canvas>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="src/main.js" type="module"></script>
-</body>
 
+    <div id="menu">
+        <h1>BATTLE ARENA</h1>
+        <input type="text" id="playerName" placeholder="Ton pseudo">
+        <button onclick="joinGame()">REJOINDRE</button>
+        <p id="status">Prêt à jouer ?</p>
+    </div>
+
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="400" height="400" style="background: black;"></canvas>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="src/main.js"></script> 
+</body>
 </html>

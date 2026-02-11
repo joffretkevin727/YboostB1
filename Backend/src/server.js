@@ -4,12 +4,17 @@ const { Server } = require('socket.io');
 const Game = require('./models/game'); // Importe ta classe Game
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Autorise tous les joueurs à se connecter
+    methods: ["GET", "POST"]
+  }
+});
 
 const game = new Game();
 const TICK_RATE = 33; // ~30 images par seconde
 const path = require('path');
-
+const lobby = new Set(); // Stocke les IDs des joueurs prêts
 // Indique à Express d'utiliser le dossier Frontend pour les fichiers statiques
 // On remonte d'un niveau (..) puis on entre dans Frontend
 app.use(express.static(path.join(__dirname, '../../Frontend')));
@@ -20,20 +25,48 @@ app.get('/', (req, res) => {
 });
 
 io.on('connection', (socket) => {
-    console.log(`Joueur connecté : ${socket.id}`);
+    console.log(`Socket connecté : ${socket.id}`);
 
-    // Créer un joueur quand quelqu'un se connecte
-    // On le place à des endroits différents selon le nombre de joueurs
+    // On n'ajoute PAS le joueur à game.players ici.
+    // On attend qu'il clique sur "Rejoindre".
+
+    socket.on('joinLobby', (data) => {
+    if (Object.keys(game.players).length >= 2) {
+        socket.emit('error', 'Partie pleine');
+        return;
+    }
+
     const startX = Object.keys(game.players).length === 0 ? 1 : 6;
-    game.players[socket.id] = { id: socket.id, x: startX, y: 3, hp: 100, dmgDealt: 0, hasUlti: false };
+    // Correction : on utilise data.name pour correspondre au client
+    game.players[socket.id] = { 
+        id: socket.id, 
+        name: data.name || "Joueur", 
+        x: startX, 
+        y: 3, 
+        hp: 100, 
+        dmgDealt: 0, 
+        hasUlti: false 
+    };
 
-    // Écouter les actions du client
+    console.log(`${data.name} a rejoint le lobby.`);
+    
+    // Correction : on envoie juste le nombre pour matcher socket.on('lobbyUpdate', (count) => ...
+    io.emit('lobbyUpdate', Object.keys(game.players).length);
+
+    if (Object.keys(game.players).length === 2) {
+        io.emit('gameStart'); 
+    }
+});
+
     socket.on('action', (action) => {
-        game.applyAction(socket.id, action); // Applique l'action au moteur de jeu
+        if (game.players[socket.id]) {
+            game.applyAction(socket.id, action);
+        }
     });
 
     socket.on('disconnect', () => {
         delete game.players[socket.id];
+        io.emit('lobbyUpdate', { count: Object.keys(game.players).length });
         console.log(`Joueur déconnecté : ${socket.id}`);
     });
 });
