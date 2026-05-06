@@ -1,0 +1,20 @@
+body {
+  background-color: rgb(17, 17, 17);
+}
+
+/* scaleX(1) = Normal, scaleX(-1) = Miroir */
+.droite {
+  transform: scaleX(1);
+}
+
+.gauche {
+  transform: scaleX(-1);
+}
+
+img {
+  width: 100px;
+}
+
+.elmt2 {
+  filter: hue-rotate(89deg) brightness(1);
+}
