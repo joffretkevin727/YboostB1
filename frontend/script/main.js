@@ -3,7 +3,7 @@ const canvas = document.getElementById('monCanvas');
 const ctx = canvas.getContext('2d');
 
 // "1vs1" pour jouer à deux au clavier, ou "vsBot" pour activer le bot
-let modeDeJeu = "vsBot"; 
+let modeDeJeu = "1vs1"; 
 
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
