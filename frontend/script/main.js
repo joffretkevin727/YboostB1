@@ -7,7 +7,7 @@ const ctx    = canvas.getContext('2d');
 // MODE DE JEU
 // Valeurs possibles : "1vs1" | "vsBot"
 // ─────────────────────────────────────────────
-let modeDeJeu = "vsBot";
+let modeDeJeu = "1vs1";
 
 // ─────────────────────────────────────────────
 // INSTANCIATION DES JOUEURS

@@ -7,8 +7,8 @@ app.use('/frontend', express.static(path.join(__dirname, '..', 'frontend')));
 app.use('/Backend', express.static(path.join(__dirname, '..', 'Backend')));
 
 // Routes
-app.get('/home', (req, res) => {
-    res.sendFile(path.join(__dirname, 'home.html'));
+app.get('/menu', (req, res) => {
+    res.sendFile(path.join(__dirname, 'menu.html'));
 });
 
 app.get('/ingame', (req, res) => {
