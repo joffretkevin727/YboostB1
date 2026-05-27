@@ -6,6 +6,10 @@ let p1Y = 110; // Position initiale en hauteur (Y)
 let p1Direction = "droite";
 let num1 = 0;
 let timer1 = null;
+// vie
+let p1Health = 100;
+const p1MaxHealth = 100;
+
 const maxImages1 = 5;
 
 // Configuration des touches (Z, Q, S, D)
@@ -13,13 +17,13 @@ const keysJ1 = {
   d: false,
   q: false,
   z: false,
-  s: false
+  s: false,
 };
 let lastKeyJ1 = "";
 
 // --- GESTION DES ANIMATIONS (FRAMES) ---
 function startAnimJ1(p1Sprite) {
-  if (!p1Sprite || timer1 !== null) return; 
+  if (!p1Sprite || timer1 !== null) return;
   timer1 = setInterval(() => {
     num1 = num1 >= maxImages1 ? 1 : num1 + 1;
     p1Sprite.src = `../frontend/assets/man/00${num1}.png`;
@@ -27,7 +31,7 @@ function startAnimJ1(p1Sprite) {
 }
 
 function stopAnimJ1(p1Sprite) {
-  if (!p1Sprite) return; 
+  if (!p1Sprite) return;
   clearInterval(timer1);
   timer1 = null;
   num1 = 0;
@@ -53,19 +57,21 @@ window.addEventListener("keyup", (event) => {
 // --- FONCTION PRINCIPALE APPELÉE PAR LA BOUCLE DE JEU (MAIN.JS) ---
 function updateAndDrawPlayer1(ctx) {
   // Récupération de la balise image via sa classe .j1
-  const p1Sprite = document.querySelector('.j1');
+  const p1Sprite = document.querySelector(".j1");
 
   // Sécurité si l'image n'est pas encore chargée dans le DOM
   if (!p1Sprite) {
     console.warn("En attente du chargement de l'élément avec la classe .j1...");
-    return; 
+    return;
   }
 
   let estEnTrainDeBouger = false;
   let vitesse = 1.85;
 
   // Détection des mouvements sur chaque axe
-  const bougeHorizontal = (keysJ1.d && (lastKeyJ1 === "d" || !keysJ1.q)) || (keysJ1.q && (lastKeyJ1 === "q" || !keysJ1.d));
+  const bougeHorizontal =
+    (keysJ1.d && (lastKeyJ1 === "d" || !keysJ1.q)) ||
+    (keysJ1.q && (lastKeyJ1 === "q" || !keysJ1.d));
   const bougeVertical = keysJ1.z || keysJ1.s;
 
   // Correction de la vitesse en diagonale (division par racine de 2)
@@ -76,20 +82,22 @@ function updateAndDrawPlayer1(ctx) {
   // Mouvement Horizontal (Axe X)
   if (keysJ1.d && (lastKeyJ1 === "d" || !keysJ1.q)) {
     p1Direction = "droite";
-    p1X += vitesse; 
+    p1X += vitesse;
     estEnTrainDeBouger = true;
   } else if (keysJ1.q && (lastKeyJ1 === "q" || !keysJ1.d)) {
     p1Direction = "gauche";
-    p1X -= vitesse; 
+    p1X -= vitesse;
     estEnTrainDeBouger = true;
   }
 
   // Mouvement Vertical (Axe Y)
-  if (keysJ1.z) {       // Monter
-    p1Y -= vitesse;     
+  if (keysJ1.z) {
+    // Monter
+    p1Y -= vitesse;
     estEnTrainDeBouger = true;
-  } else if (keysJ1.s) { // Descendre
-    p1Y += vitesse;     
+  } else if (keysJ1.s) {
+    // Descendre
+    p1Y += vitesse;
     estEnTrainDeBouger = true;
   }
 
@@ -118,4 +126,27 @@ function updateAndDrawPlayer1(ctx) {
     ctx.drawImage(p1Sprite, p1X, p1Y, 64, 64);
   }
   ctx.restore();
+
+  // --- BARRE DE VIE ---
+  const largeurBarre = 50;
+  const hauteurBarre = 6;
+  const decalageY = 12;
+
+  const barreX = p1X + 32 - largeurBarre / 2;
+  const barreY = p1Y - decalageY;
+
+  // 1. Fond de la barre
+  ctx.fillStyle = "#ff4c4c";
+  ctx.fillRect(barreX, barreY, largeurBarre, hauteurBarre);
+
+  // 2. Vie actuelle
+  // calcule le pourcentage de vie restante pour adapter la largeur
+  const pourcentageVie = p1Health / p1MaxHealth;
+  ctx.fillStyle = "#32cd32";
+  ctx.fillRect(barreX, barreY, largeurBarre * pourcentageVie, hauteurBarre);
+
+  // 3. Contour
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barreX, barreY, largeurBarre, hauteurBarre); // ✅ CORRIGÉ
 }
