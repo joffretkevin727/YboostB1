@@ -6,6 +6,11 @@ let p2Y = 110; // Position initiale en hauteur (Y)
 let p2Direction = "gauche"; // Le joueur 2 regarde à gauche par défaut au départ
 let num2 = 0;
 let timer2 = null;
+
+// vie
+let p2Health = 100;
+const p2MaxHealth = 100;
+
 const maxImages2 = 5;
 
 // Configuration des touches (Flèches du clavier)
@@ -13,13 +18,13 @@ const keysJ2 = {
   ArrowRight: false,
   ArrowLeft: false,
   ArrowUp: false,
-  ArrowDown: false
+  ArrowDown: false,
 };
 let lastKeyJ2 = "";
 
 // --- GESTION DES ANIMATIONS (FRAMES) ---
 function startAnimJ2(p2Sprite) {
-  if (!p2Sprite || timer2 !== null) return; 
+  if (!p2Sprite || timer2 !== null) return;
   timer2 = setInterval(() => {
     num2 = num2 >= maxImages2 ? 1 : num2 + 1;
     p2Sprite.src = `../frontend/assets/man/00${num2}.png`;
@@ -27,7 +32,7 @@ function startAnimJ2(p2Sprite) {
 }
 
 function stopAnimJ2(p2Sprite) {
-  if (!p2Sprite) return; 
+  if (!p2Sprite) return;
   clearInterval(timer2);
   timer2 = null;
   num2 = 0;
@@ -53,19 +58,21 @@ window.addEventListener("keyup", (event) => {
 // --- FONCTION PRINCIPALE APPELÉE PAR LA BOUCLE DE JEU (MAIN.JS) ---
 function updateAndDrawPlayer2(ctx) {
   // Récupération de la balise image via sa classe .j2
-  const p2Sprite = document.querySelector('.j2');
+  const p2Sprite = document.querySelector(".j2");
 
   // Sécurité si l'image n'est pas encore chargée dans le DOM
   if (!p2Sprite) {
     console.warn("En attente du chargement de l'élément avec la classe .j2...");
-    return; 
+    return;
   }
 
   let estEnTrainDeBouger = false;
   let vitesse = 1.85;
 
   // Détection des mouvements sur chaque axe
-  const bougeHorizontal = (keysJ2.ArrowRight && (lastKeyJ2 === "ArrowRight" || !keysJ2.ArrowLeft)) || (keysJ2.ArrowLeft && (lastKeyJ2 === "ArrowLeft" || !keysJ2.ArrowRight));
+  const bougeHorizontal =
+    (keysJ2.ArrowRight && (lastKeyJ2 === "ArrowRight" || !keysJ2.ArrowLeft)) ||
+    (keysJ2.ArrowLeft && (lastKeyJ2 === "ArrowLeft" || !keysJ2.ArrowRight));
   const bougeVertical = keysJ2.ArrowUp || keysJ2.ArrowDown;
 
   // Correction de la vitesse en diagonale (division par racine de 2)
@@ -76,20 +83,25 @@ function updateAndDrawPlayer2(ctx) {
   // Mouvement Horizontal (Axe X)
   if (keysJ2.ArrowRight && (lastKeyJ2 === "ArrowRight" || !keysJ2.ArrowLeft)) {
     p2Direction = "droite";
-    p2X += vitesse; 
+    p2X += vitesse;
     estEnTrainDeBouger = true;
-  } else if (keysJ2.ArrowLeft && (lastKeyJ2 === "ArrowLeft" || !keysJ2.ArrowRight)) {
+  } else if (
+    keysJ2.ArrowLeft &&
+    (lastKeyJ2 === "ArrowLeft" || !keysJ2.ArrowRight)
+  ) {
     p2Direction = "gauche";
-    p2X -= vitesse; 
+    p2X -= vitesse;
     estEnTrainDeBouger = true;
   }
 
   // Mouvement Vertical (Axe Y)
-  if (keysJ2.ArrowUp) {         // Monter
-    p2Y -= vitesse;     
+  if (keysJ2.ArrowUp) {
+    // Monter
+    p2Y -= vitesse;
     estEnTrainDeBouger = true;
-  } else if (keysJ2.ArrowDown) { // Descendre
-    p2Y += vitesse;     
+  } else if (keysJ2.ArrowDown) {
+    // Descendre
+    p2Y += vitesse;
     estEnTrainDeBouger = true;
   }
 
@@ -118,4 +130,26 @@ function updateAndDrawPlayer2(ctx) {
     ctx.drawImage(p2Sprite, p2X, p2Y, 64, 64);
   }
   ctx.restore();
+
+  // --- BARRE DE VIE ---
+  const largeurBarre = 50;
+  const hauteurBarre = 6;
+  const decalageY = 12;
+
+  const barreX = p2X + 32 - largeurBarre / 2;
+  const barreY = p2Y - decalageY;
+
+  // 1. Fond de la barre
+  ctx.fillStyle = "#ff4c4c";
+  ctx.fillRect(barreX, barreY, largeurBarre, hauteurBarre);
+
+  // 2. Vie actuelle
+  const pourcentageVie = p2Health / p2MaxHealth;
+  ctx.fillStyle = "#32cd32";
+  ctx.fillRect(barreX, barreY, largeurBarre * pourcentageVie, hauteurBarre);
+
+  // 3. Contour
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barreX, barreY, largeurBarre, hauteurBarre); // ✅ CORRIGÉ
 }
