@@ -1,181 +1,154 @@
-// bot.js
+// Bot.js
+// Le Bot hérite de Player mais remplace le clavier par une IA
 
-// --- VARIABLES D'ÉTAT DU BOT ---
-let botX = 360;
-let botY = 110;
-let botDirection = "gauche";
-let numBot = 0;
-let timerBot = null;
-const maxImagesBot = 5;
+class Bot extends Player {
+  /**
+   * @param {object} config  - Même config que Player, sans `keys`
+   * @param {Player} target  - Référence au joueur ciblé (p1)
+   */
+  constructor({ startX, startY, spriteClass, spritePath }, target) {
+    // On passe des touches vides — le bot ne lit pas le clavier
+    super({
+      startX, startY, spriteClass, spritePath,
+      keys: { haut: "", bas: "", gauche: "", droite: "" }
+    });
 
-// --- ÉTAT COMPORTEMENTAL ---
-let botEtat = "patrouille"; // "patrouille" | "poursuite" | "repos"
-let botReposTimer = 0;
-let botCiblePatrouille = { x: 200, y: 135 };
+    // Retire les listeners clavier inutiles
+    window.removeEventListener("keydown", this._onKeyDown);
+    window.removeEventListener("keyup",   this._onKeyUp);
 
-// Seuils de transition
-const DIST_DETECTION = 160; // distance à partir de laquelle le bot remarque P1
-const DIST_ABANDON   = 220; // distance à partir de laquelle il renonce
-const DIST_ATTAQUE   = 50;  // distance à laquelle il considère être "au contact"
+    // --- Cible ---
+    this.target = target;
 
-// --- VARIABLES DE LA STRATÉGIE HUMAINE ---
-let positionHistory = [];
-const REACTION_DELAY = 10; // ~160ms à 200ms de retard de réaction
+    // --- State Machine ---
+    this.etat        = "patrouille"; // "patrouille" | "poursuite" | "repos"
+    this.reposTimer  = 0;
+    this.ciblePatrouille = { x: 200, y: 135 };
 
-let cibleX_Imprecise = 0;
-let cibleY_Imprecise = 0;
-let timerDecision = 0; // Temps avant que le bot ne recalcule son imprécision
+    // --- Seuils comportementaux ---
+    this.DIST_DETECTION = 160;
+    this.DIST_ABANDON   = 220;
+    this.DIST_ATTAQUE   = 50;
 
-// --- GESTION DES ANIMATIONS ---
-function startAnimBot(botSprite) {
-  if (!botSprite || timerBot !== null) return;
-  timerBot = setInterval(() => {
-    numBot = numBot >= maxImagesBot ? 1 : numBot + 1;
-    botSprite.src = `../frontend/assets/man/00${numBot}.png`;
-  }, 100);
-}
+    // --- Simulation du temps de réaction ---
+    this.positionHistory = [];
+    this.REACTION_DELAY  = 10; // ~160ms
 
-function stopAnimBot(botSprite) {
-  if (!botSprite) return;
-  clearInterval(timerBot);
-  timerBot = null;
-  numBot = 0;
-  botSprite.src = "../frontend/assets/man/000.png";
-}
-
-// --- FONCTION PRINCIPALE APPELÉE PAR LA BOUCLE DE JEU ---
-function updateAndDrawBot(ctx) {
-  const botSprite = document.querySelector('.j2');
-  if (!botSprite) return;
-
-  // 1. SIMULATION DU TEMPS DE RÉACTION
-  // Le bot "voit" la position du joueur avec un retard de REACTION_DELAY frames
-  positionHistory.push({ x: p1X, y: p1Y });
-  if (positionHistory.length > REACTION_DELAY) {
-    positionHistory.shift();
-  }
-  const ciblePercue = positionHistory[0];
-
-  let estEnTrainDeBouger = false;
-  const vitesse = 1.85;
-
-  // 2. SIMULATION DE L'IMPRÉCISION (recalculée toutes les ~15 frames / 250ms)
-  timerDecision++;
-  if (timerDecision > 15 || cibleX_Imprecise === 0) {
-    const flouVisuelX = (Math.random() - 0.5) * 30;
-    const flouVisuelY = (Math.random() - 0.5) * 30;
-    cibleX_Imprecise = ciblePercue.x + flouVisuelX;
-    cibleY_Imprecise = ciblePercue.y + flouVisuelY;
-    timerDecision = 0;
+    // --- Imprécision ---
+    this.cibleX_Imprecise = 0;
+    this.cibleY_Imprecise = 0;
+    this.timerDecision    = 0;
   }
 
-  // Distance entre le bot et la cible perçue (imprécise)
-  const distanceX    = Math.abs(botX - cibleX_Imprecise);
-  const distanceY    = Math.abs(botY - cibleY_Imprecise);
-  const distanceTotale = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+  // ─────────────────────────────────────────────
+  // MISE À JOUR (remplace update() du parent)
+  // ─────────────────────────────────────────────
 
-  // 3. MISE À JOUR DE L'ÉTAT COMPORTEMENTAL
-  if (botEtat === "repos") {
-    // Le bot attend avant de repartir (simule une pause humaine)
-    botReposTimer--;
-    if (botReposTimer <= 0) botEtat = "patrouille";
+  update(ctx) {
+    const sprite = document.querySelector(this.spriteClass);
+    if (!sprite) return;
 
-  } else if (botEtat === "patrouille") {
-    if (distanceTotale < DIST_DETECTION) {
-      botEtat = "poursuite"; // P1 repéré → on fonce
+    // 1. HISTORIQUE DE POSITION (retard de réaction)
+    this.positionHistory.push({ x: this.target.x, y: this.target.y });
+    if (this.positionHistory.length > this.REACTION_DELAY) {
+      this.positionHistory.shift();
+    }
+    const ciblePercue = this.positionHistory[0] || { x: this.target.x, y: this.target.y };
+
+    // 2. IMPRÉCISION (recalculée toutes les ~15 frames)
+    this.timerDecision++;
+    if (this.timerDecision > 15 || this.cibleX_Imprecise === 0) {
+      this.cibleX_Imprecise = ciblePercue.x + (Math.random() - 0.5) * 30;
+      this.cibleY_Imprecise = ciblePercue.y + (Math.random() - 0.5) * 30;
+      this.timerDecision    = 0;
     }
 
-  } else if (botEtat === "poursuite") {
-    if (distanceTotale > DIST_ABANDON) {
-      botEtat = "patrouille"; // P1 trop loin → on abandonne
-    }
-    if (distanceTotale < DIST_ATTAQUE) {
-      // Contact atteint → pause humaine avant de repartir
-      botEtat = "repos";
-      botReposTimer = 40 + Math.floor(Math.random() * 30); // 40-70 frames (~0.7-1.2s)
-    }
-  }
+    const distanceX      = Math.abs(this.x - this.cibleX_Imprecise);
+    const distanceY      = Math.abs(this.y - this.cibleY_Imprecise);
+    const distanceTotale = Math.hypot(distanceX, distanceY);
 
-  // 4. MOUVEMENT SELON L'ÉTAT
-  let bougeHorizontal = false;
-  let bougeVertical   = false;
+    // 3. STATE MACHINE
+    if (this.etat === "repos") {
+      this.reposTimer--;
+      if (this.reposTimer <= 0) this.etat = "patrouille";
 
-  if (botEtat === "poursuite" && distanceTotale > DIST_ATTAQUE) {
-    // --- Déplacement vers la cible perçue ---
+    } else if (this.etat === "patrouille") {
+      if (distanceTotale < this.DIST_DETECTION) this.etat = "poursuite";
 
-    // Axe Horizontal
-    if (distanceX > 8) {
-      if (botX > cibleX_Imprecise) {
-        botDirection = "gauche";
-        botX -= vitesse;
-        bougeHorizontal = true;
-      } else {
-        botDirection = "droite";
-        botX += vitesse;
-        bougeHorizontal = true;
+    } else if (this.etat === "poursuite") {
+      if (distanceTotale > this.DIST_ABANDON)   this.etat = "patrouille";
+      if (distanceTotale < this.DIST_ATTAQUE) {
+        this.etat       = "repos";
+        this.reposTimer = 40 + Math.floor(Math.random() * 30);
       }
-      estEnTrainDeBouger = true;
     }
 
-    // Axe Vertical
-    if (distanceY > 8) {
-      if (botY > cibleY_Imprecise) {
-        botY -= vitesse;
-      } else {
-        botY += vitesse;
+    // 4. MOUVEMENT SELON L'ÉTAT
+    let enMouvement = false;
+    const vitesse   = 1.85;
+
+    if (this.etat === "poursuite" && distanceTotale > this.DIST_ATTAQUE) {
+      let bougeH = false;
+      let bougeV = false;
+
+      if (distanceX > 8) {
+        if (this.x > this.cibleX_Imprecise) { this.x -= vitesse; this.direction = "gauche"; }
+        else                                { this.x += vitesse; this.direction = "droite"; }
+        bougeH = true;
       }
-      bougeVertical = true;
-      estEnTrainDeBouger = true;
+      if (distanceY > 8) {
+        if (this.y > this.cibleY_Imprecise) this.y -= vitesse;
+        else                                this.y += vitesse;
+        bougeV = true;
+      }
+
+      // Correction diagonale (corrigée)
+      if (bougeH && bougeV) {
+        const correction = vitesse - (vitesse / Math.SQRT2);
+        if (this.x > this.cibleX_Imprecise) this.x += correction; else this.x -= correction;
+        if (this.y > this.cibleY_Imprecise) this.y += correction; else this.y -= correction;
+      }
+
+      enMouvement = bougeH || bougeV;
+
+    } else if (this.etat === "patrouille") {
+      const dCible = Math.hypot(
+        this.ciblePatrouille.x - this.x,
+        this.ciblePatrouille.y - this.y
+      );
+      if (dCible < 6) {
+        this.ciblePatrouille = {
+          x: 20 + Math.random() * (ctx.canvas.width  - 84),
+          y: 20 + Math.random() * (ctx.canvas.height - 84)
+        };
+      } else {
+        const v = vitesse * 0.6;
+        this.x += (this.ciblePatrouille.x - this.x) / dCible * v;
+        this.y += (this.ciblePatrouille.y - this.y) / dCible * v;
+        this.direction = this.ciblePatrouille.x < this.x ? "gauche" : "droite";
+        enMouvement    = true;
+      }
     }
 
-    // Correction diagonale (lisse la vitesse en cas de mouvement sur les deux axes)
-    if (bougeHorizontal && bougeVertical) {
-      const correction = vitesse - (vitesse / Math.SQRT2);
-      if (botX > cibleX_Imprecise) botX += correction; else botX -= correction;
-      if (botY > cibleY_Imprecise) botY += correction; else botY -= correction;
-    }
+    // Animation
+    enMouvement ? this.startAnim(sprite) : this.stopAnim(sprite);
 
-  } else if (botEtat === "patrouille") {
-    // --- Déplacement vers un point de patrouille aléatoire ---
-    const dCible = Math.hypot(botCiblePatrouille.x - botX, botCiblePatrouille.y - botY);
+    // Limites canvas
+    this.x = Math.max(0, Math.min(ctx.canvas.width  - 64, this.x));
+    this.y = Math.max(0, Math.min(ctx.canvas.height - 64, this.y));
 
-    if (dCible < 6) {
-      // Point atteint → on choisit un nouveau point aléatoire
-      botCiblePatrouille = {
-        x: 20 + Math.random() * (ctx.canvas.width  - 84),
-        y: 20 + Math.random() * (ctx.canvas.height - 84)
-      };
+    // Dessin
+    ctx.save();
+    if (this.direction === "gauche") {
+      ctx.translate(this.x + 64, this.y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(sprite, 0, 0, 64, 64);
     } else {
-      // On avance doucement vers le point cible (60% de la vitesse normale)
-      botX += (botCiblePatrouille.x - botX) / dCible * (vitesse * 0.6);
-      botY += (botCiblePatrouille.y - botY) / dCible * (vitesse * 0.6);
-      botDirection = botCiblePatrouille.x < botX ? "gauche" : "droite";
-      estEnTrainDeBouger = true;
+      ctx.drawImage(sprite, this.x, this.y, 64, 64);
     }
-  }
-  // En état "repos" : estEnTrainDeBouger reste false → animation arrêtée
+    ctx.restore();
 
-  // --- GESTION DE L'ANIMATION DE MARCHE ---
-  if (estEnTrainDeBouger) {
-    startAnimBot(botSprite);
-  } else {
-    stopAnimBot(botSprite);
+    // Barre de vie (héritée)
+    this._drawHealthBar(ctx);
   }
-
-  // --- LIMITES DU CANVAS (480x270) ---
-  if (botX < 0) botX = 0;
-  if (botX > ctx.canvas.width  - 64) botX = ctx.canvas.width  - 64;
-  if (botY < 0) botY = 0;
-  if (botY > ctx.canvas.height - 64) botY = ctx.canvas.height - 64;
-
-  // --- RENDU VISUEL ---
-  ctx.save();
-  if (botDirection === "gauche") {
-    ctx.translate(botX + 64, botY);
-    ctx.scale(-1, 1);
-    ctx.drawImage(botSprite, 0, 0, 64, 64);
-  } else {
-    ctx.drawImage(botSprite, botX, botY, 64, 64);
-  }
-  ctx.restore();
 }
