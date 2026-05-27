@@ -2,7 +2,6 @@ body {
   background-color: rgb(17, 17, 17);
 }
 
-/* scaleX(1) = Normal, scaleX(-1) = Miroir */
 .droite {
   transform: scaleX(1);
 }
@@ -13,6 +12,7 @@ body {
 
 img {
   width: 100px;
+  z-index: 10;
 }
 
 .elmt2 {
