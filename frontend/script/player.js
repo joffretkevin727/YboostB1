@@ -111,17 +111,22 @@ class Player {
     }, 1000);
   }
 
-  updateProjectiles(ctx, adversaires) {
+  // On ajoute "obstacles" en 3ème paramètre
+  updateProjectiles(ctx, adversaires, obstacles) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       let p = this.projectiles[i];
 
+      // Mouvement
       if (p.direction === "droite") p.x += this.projectileSpeed;
       else p.x -= this.projectileSpeed;
 
+      // Dessin
       ctx.fillStyle = "#ffcc00";
       ctx.fillRect(p.x, p.y, 10, 4);
 
       let aTouche = false;
+
+      // 1. Collision avec les adversaires
       if (adversaires) {
         for (let adv of adversaires) {
           if (
@@ -138,8 +143,27 @@ class Player {
           }
         }
       }
-
       if (aTouche) continue;
+
+      // 2. NOUVEAU : Collision avec les murs
+      if (obstacles) {
+        for (let obs of obstacles) {
+          // Le projectile fait 10px de large et 4px de haut. On fait un test de collision classique (AABB).
+          if (
+            p.x < obs.x + obs.w &&
+            p.x + 10 > obs.x &&
+            p.y < obs.y + obs.h &&
+            p.y + 4 > obs.y
+          ) {
+            this.projectiles.splice(i, 1); // La balle est détruite contre le mur
+            aTouche = true;
+            break; // On arrête de vérifier les autres murs pour cette balle
+          }
+        }
+      }
+      if (aTouche) continue;
+
+      // 3. Sortie d'écran
       if (p.x < 0 || p.x > ctx.canvas.width) this.projectiles.splice(i, 1);
     }
   }
@@ -204,7 +228,7 @@ class Player {
     ctx.restore();
 
     this._drawHealthBar(ctx);
-    this.updateProjectiles(ctx, adversaires);
+    this.updateProjectiles(ctx, adversaires, obstacles);
   }
 
   _drawHealthBar(ctx) {

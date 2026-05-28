@@ -23,7 +23,7 @@ canvas {
   image-rendering: pixelated;
 
   /* On peut garder ton fond rouge pour voir s'il y a un décalage, mais tu pourras l'enlever */
-  background: red;
+  background: rgb(0, 0, 0);
 }
 /* On cache les images qui servent d'assets au jeu */
 .j1,

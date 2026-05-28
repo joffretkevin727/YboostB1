@@ -64,26 +64,30 @@ creerObstacles();
 
 // Outil de debug pour voir les murs (à effacer plus tard)
 function debugDessinerHitboxes(ctx) {
-  ctx.fillStyle = "rgba(255, 0, 0, 0.4)";
+  /*ctx.fillStyle = "rgba(255, 0, 0, 0.4)";
   for (let obs of mapObstacles) {
     ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-  }
+  }*/
 }
 
 // ==========================================
 // 3. CRÉATION DES JOUEURS
 // ==========================================
+
+// Joueur 1 : Coin en Haut à Gauche
 const joueur1 = new Player({
-  startX: 50,
-  startY: 110,
+  startX: 150, // Proche du mur gauche
+  startY: 150, // Proche du mur haut
   spriteClass: ".j1",
   keys: { haut: "z", bas: "s", gauche: "q", droite: "d" },
   spritePath: "../frontend/assets/man/",
 });
 
+// Joueur 2 (Humain) : Coin en Bas à Droite
 const joueur2 = new Player({
-  startX: 320,
-  startY: 110,
+  // On prend la largeur/hauteur totale, et on recule de 100 pixels pour ne pas être coincé dans le mur
+  startX: canvas.width - 200,
+  startY: canvas.height - 200,
   spriteClass: ".j2",
   keys: {
     haut: "arrowup",
@@ -91,6 +95,15 @@ const joueur2 = new Player({
     gauche: "arrowleft",
     droite: "arrowright",
   },
+  spritePath: "../frontend/assets/man/",
+});
+
+// Bot (IA) : Coin en Bas à Droite (même endroit que le J2)
+const bot = new Bot({
+  startX: canvas.width - 200,
+  startY: canvas.height - 200,
+  spriteClass: ".j2", // Utilise le même sprite que le joueur 2
+  keys: {}, // L'IA n'a pas besoin de touches
   spritePath: "../frontend/assets/man/",
 });
 
