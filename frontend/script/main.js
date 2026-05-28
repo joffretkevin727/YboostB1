@@ -16,8 +16,8 @@ ctx.imageSmoothingEnabled = false;
 let mapObstacles = [];
 
 function creerObstacles() {
-  const w = canvas.width; // La vraie largeur actuelle de ton canvas
-  const h = canvas.height; // La vraie hauteur actuelle de ton canvas
+  const w = canvas.width; // La vraie largeur actuelle du canvas
+  const h = canvas.height; // La vraie hauteur actuelle du canvas
   const epaisseur = 25; // L'épaisseur des murs du vaisseau
 
   mapObstacles = [
@@ -43,8 +43,8 @@ function creerObstacles() {
     { x: 510, y: 280, w: 25, h: 110 }, // Mur mid haut gauche vertical
     { x: 960, y: 210, w: 130, h: 70 }, // Mur mid haut droit horizontal
     { x: 1060, y: 280, w: 25, h: 105 }, // Mur mid haut droit vertical
-    { x: 510, y: 460, w: 25, h: 160 }, // Mur mid bas gauche vertical
-    { x: 1060, y: 460, w: 25, h: 160 }, // Mur mid bas droit vertical
+    { x: 510, y: 510, w: 25, h: 100 }, // Mur mid bas gauche vertical
+    { x: 1060, y: 510, w: 25, h: 100 }, // Mur mid bas droit vertical
     { x: 350, y: 610, w: 150, h: 60 }, // Mur mid bas gauche horizontal
     { x: 345, y: 500, w: 40, h: 170 }, // Mur mid bas gauche gauche vertical
     { x: 1100, y: 610, w: 150, h: 70 }, // Mur mid bas droit horizontal
@@ -64,10 +64,10 @@ creerObstacles();
 
 // Outil de debug pour voir les murs (à effacer plus tard)
 function debugDessinerHitboxes(ctx) {
-  /*ctx.fillStyle = "rgba(255, 0, 0, 0.4)";
+  ctx.fillStyle = "rgba(255, 0, 0, 0.4)";
   for (let obs of mapObstacles) {
     ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-  }*/
+  }
 }
 
 // ==========================================
@@ -111,27 +111,25 @@ const bot = new Bot({
 // 4. LA BOUCLE DE JEU
 // ==========================================
 function gameLoop() {
-  // 1. On nettoie
+  // 1. On nettoie l'écran
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // 2. On dessine le fond
+  // 2. On dessine la map du FOND (sol, murs de base)
   dessinerMap(ctx, canvas);
 
-  // 3. On affiche les hitboxes rouges (pour t'aider à ajuster)
-  debugDessinerHitboxes(ctx);
-
-  // 4. On met à jour et on dessine les joueurs
-  // CORRECTION : La logique des adversaires a été corrigée selon le mode de jeu
+  // 3. On met à jour et on DESSINE LES JOUEURS
   if (modeDeJeu === "1vs1") {
     joueur1.update(ctx, [joueur2], mapObstacles);
     joueur2.update(ctx, [joueur1], mapObstacles);
-  } else if (modeDeJeu === "vsBot") {
-    // Si tu as bien défini une variable 'bot' ailleurs, ça passera par ici
+  } else if (modeDeJeu === "1vsbot") {
     joueur1.update(ctx, [bot], mapObstacles);
     if (typeof bot !== "undefined") {
       bot.update(ctx, [joueur1], mapObstacles);
     }
   }
+
+  // 4. On dessine le PREMIER PLAN (par-dessus les joueurs !)
+  dessinerPremierPlan(ctx);
 
   // 5. On boucle
   requestAnimationFrame(gameLoop);
@@ -143,3 +141,25 @@ function gameLoop() {
 window.onload = () => {
   gameLoop();
 };
+
+// ==========================================
+// DÉCORS DE PREMIER PLAN (Piliers)
+// ==========================================
+const piliersForeground = [
+  // Remplace les x, y, w, h par les bonnes coordonnées sur ta map
+  { id: "img-pilier1", x: 320, y: 219, w: 35, h: 170 },
+  { id: "img-pilier2", x: 1260, y: 221, w: 40, h: 110 },
+  { id: "img-pilier3", x: 590, y: 710, w: 40, h: 120 },
+  { id: "img-pilier4", x: 965, y: 710, w: 47, h: 120 },
+  { id: "img-mur1", x: 510, y: 460, w: 20, h: 160 },
+  { id: "img-mur1", x: 1067, y: 460, w: 20, h: 160 },
+];
+
+function dessinerPremierPlan(ctx) {
+  for (let pilier of piliersForeground) {
+    const img = document.getElementById(pilier.id);
+    if (img) {
+      ctx.drawImage(img, pilier.x, pilier.y, pilier.w, pilier.h);
+    }
+  }
+}

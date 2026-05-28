@@ -31,3 +31,7 @@ canvas {
 .arena {
   display: none;
 }
+
+.asset-cache {
+  display: none;
+}
