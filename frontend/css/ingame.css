@@ -1,8 +1,33 @@
+/* 1. On donne au body la taille de l'écran et on centre son contenu */
+body {
+  margin: 0;
+  height: 100vh; /* 100% de la hauteur de la fenêtre */
+  display: flex; /* Active le mode Flexbox */
+  justify-content: center; /* Centre horizontalement */
+  align-items: center; /* Centre verticalement */
+  background-color: #111; /* Petit fond sombre derrière la map */
+  overflow: hidden; /* Enlève les barres de défilement (scroll) */
+}
+
+/* 2. On dit au canvas de prendre le max de place sans dépasser, et en gardant le ratio */
 canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: auto;
-    aspect-ratio: 16 / 9;
-    background: red;
+  /* On force le canvas à essayer de prendre tout l'écran */
+  width: 100vw;
+  height: 100vh;
+
+  /* La vraie magie : demande au navigateur de redimensionner le jeu 
+       pour qu'il rentre entièrement dans l'écran sans se déformer (Letterbox) */
+  object-fit: contain;
+
+  /* Pour garder les pixels nets comme sur ta capture ! */
+  image-rendering: pixelated;
+
+  /* On peut garder ton fond rouge pour voir s'il y a un décalage, mais tu pourras l'enlever */
+  background: red;
+}
+/* On cache les images qui servent d'assets au jeu */
+.j1,
+.j2,
+.arena {
+  display: none;
 }
