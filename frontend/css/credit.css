@@ -1,0 +1,69 @@
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #060912;
+  color: #f4f7fb;
+}
+
+.credits-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.credits-card {
+  width: min(100%, 700px);
+  background: rgba(10, 19, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 2rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.credits-card h1 {
+  margin: 0 0 1rem;
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: 0.03em;
+}
+
+.credits-card p {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  color: #cbd5f0;
+}
+
+.credits-card ul {
+  margin: 0 0 2rem;
+  padding-left: 1.25rem;
+  list-style: disc;
+  color: #e2e8f0;
+  line-height: 1.8;
+}
+
+.credits-card ul li {
+  margin-bottom: 0.85rem;
+}
+
+.menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 220px;
+  padding: 0.95rem 1.4rem;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #5b8fff, #4b30f7);
+  color: #ffffff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.menu-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 30px rgba(91, 143, 255, 0.25);
+}
