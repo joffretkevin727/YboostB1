@@ -1,30 +1,147 @@
-/* Style de réinitialisation complet de la page de rendu */
 body {
   margin: 0;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: rgb(17, 17, 17);
-  overflow: hidden;
-}
-
-/* Redimensionnement automatique de la zone graphique du Canvas */
-canvas {
   width: 100vw;
   height: 100vh;
-  object-fit: contain;
-  image-rendering: -moz-crisp-edges;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  image-rendering: pixelated; /* Maintient les bords des sprites parfaitement nets */
-  background: rgb(0, 0, 0);
+  background-color: rgb(17, 17, 17);
+  overflow: hidden;
+  position: relative; /* Indispensable pour le centrage absolu */
 }
 
-/* Cache pour masquer les banques d'images HTML natives */
-.j1,
-.j2,
+canvas {
+  /* --- CENTRAGE ABSOLU ET INFAILLIBLE --- */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  /* --- GESTION DE LA TAILLE --- */
+  max-width: 100vw;
+  max-height: 100vh;
+  aspect-ratio: 16 / 9; /* Force le ratio de ton jeu (1600x900) */
+  object-fit: contain;
+}
+
+/* Le reste ne change pas */
 .arena,
 .asset-cache {
   display: none;
+}
+
+#overlay-lobby {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+}
+
+.lobby-content {
+  text-align: center;
+  background: #222;
+  padding: 40px;
+  border-radius: 12px;
+  border: 2px solid #444;
+}
+
+.skin-grid {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+.skin-card {
+  width: 120px;
+  height: 150px;
+  background: #333;
+  border: 3px solid #555;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: 0.2s;
+}
+.skin-card:hover {
+  border-color: #ffcc00;
+  background: #444;
+  transform: translateY(-5px);
+}
+.hidden {
+  display: none !important;
+}
+
+.loader {
+  border: 4px solid #333;
+  border-top: 4px solid #ffcc00;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+/* --- OVERLAY FIN DE PARTIE --- */
+#overlay-endgame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9); /* Fond très sombre */
+  backdrop-filter: blur(10px);
+  z-index: 200; /* Passe par-dessus tout le reste */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.endgame-content {
+  text-align: center;
+}
+
+/* On s'assure que tes images de victoire/défaite ne débordent pas de l'écran */
+#endgame-image {
+  max-width: 800px;
+  width: 90vw;
+  animation: popIn 0.5s ease-out;
+}
+
+.btn-action {
+  margin-top: 30px;
+  padding: 15px 40px;
+  font-size: 24px;
+  font-weight: bold;
+  background-color: #ffcc00;
+  border: 4px solid #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s;
+  font-family: sans-serif;
+}
+
+.btn-action:hover {
+  background-color: #fff;
+  color: #000;
+  transform: scale(1.05);
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

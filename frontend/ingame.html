@@ -2,52 +2,73 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <title>Espace Arène - Jeu en Ligne</title>
-    <link rel="stylesheet" href="../frontend/css/ingame.css" />
+    <title>Arène Multijoueur</title>
+    <link rel="stylesheet" href="/frontend/css/ingame.css" />
   </head>
   <body>
-    <img class="j1" src="../frontend/assets/man/000.png" />
-    <img class="j2" src="../frontend/assets/man/000.png" />
-    <img class="arena" src="../frontend/assets/arena/spaceship.png" />
-
+    <img class="arena" src="/frontend/assets/arena/spaceship.png" />
     <img
       id="img-pilier1"
-      src="../frontend/assets/piliers/pilier1.png"
+      src="/frontend/assets/piliers/pilier1.png"
       class="asset-cache"
     />
     <img
       id="img-pilier2"
-      src="../frontend/assets/piliers/pilier2.png"
+      src="/frontend/assets/piliers/pilier2.png"
       class="asset-cache"
     />
     <img
       id="img-pilier3"
-      src="../frontend/assets/piliers/pilier3.png"
+      src="/frontend/assets/piliers/pilier3.png"
       class="asset-cache"
     />
     <img
       id="img-pilier4"
-      src="../frontend/assets/piliers/pilier3.png"
+      src="/frontend/assets/piliers/pilier3.png"
       class="asset-cache"
     />
     <img
       id="img-mur1"
-      src="../frontend/assets/piliers/mur1.png"
+      src="/frontend/assets/piliers/mur1.png"
+      class="asset-cache"
+    />
+    <img
+      id="img-box"
+      src="/frontend/assets/piliers/mur1.png"
       class="asset-cache"
     />
 
-    <img
-      id="img-box"
-      src="../frontend/assets/piliers/mur1.png"
-      class="asset-cache"
-    />
+    <div id="overlay-lobby">
+      <div class="lobby-content" id="box-selection">
+        <h2>Choisissez votre Skin</h2>
+        <div class="skin-grid">
+          <div class="skin-card" data-skin="skin1"><p>Skin 1</p></div>
+          <div class="skin-card" data-skin="skin2"><p>Skin 2</p></div>
+          <div class="skin-card" data-skin="skin3"><p>Skin 3</p></div>
+          <div class="skin-card" data-skin="skin4"><p>Skin 4</p></div>
+        </div>
+      </div>
+      <div class="lobby-content hidden" id="box-file-attente">
+        <h2>Matchmaking</h2>
+        <p class="loader"></p>
+        <p id="statut-file">En attente d'un second joueur...</p>
+      </div>
+    </div>
 
     <canvas id="monCanvas" width="1600" height="900"></canvas>
 
+    <div id="overlay-endgame" class="hidden">
+      <div class="endgame-content">
+        <img id="endgame-image" src="" alt="Résultat de la partie" />
+        <br />
+        <button id="btn-retour-menu" class="btn-action">Retour au Menu</button>
+      </div>
+    </div>
+
+    <canvas id="monCanvas" width="1600" height="900"></canvas>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="../frontend/script/arene.js"></script>
-    <script src="../frontend/script/player.js"></script>
-    <script src="../frontend/script/bot.js"></script>
-    <script src="../frontend/script/main.js"></script>
+    <script src="/frontend/script/arene.js"></script>
+    <script src="/frontend/script/player.js"></script>
+    <script src="/frontend/script/main.js"></script>
   </body>
 </html>

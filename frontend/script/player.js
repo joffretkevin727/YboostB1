@@ -1,20 +1,20 @@
-// frontend/script/player.js
 class Player {
-  constructor({
-    startX,
-    startY,
-    spriteClass,
-    spritePath,
-    isLocal = false,
-    socket = null,
-  }) {
+  constructor({ startX, startY, skin, isLocal = false, socket = null }) {
     this.x = startX;
     this.y = startY;
     this.direction = startX < 800 ? "droite" : "gauche";
-    this.spriteClass = spriteClass;
-    this.spritePath = spritePath;
-    this.isLocal = isLocal; // Distingue le joueur physique des avatars distants reçus du réseau
+    this.isLocal = isLocal;
     this.socket = socket;
+
+    // NOUVEAU : On sauvegarde proprement le nom du skin en mémoire ("skin1", "skin2"...)
+    this.skin = skin;
+
+    // Chemin absolu pour le skin choisi
+    this.spritePath = `/frontend/assets/${skin}/`;
+    this.sprite = new Image();
+    this.sprite.src = `${this.spritePath}000.png`;
+
+    // ... la suite de ton code ne change pas
 
     this.numFrame = 0;
     this.maxFrames = 5;
@@ -22,18 +22,15 @@ class Player {
     this.health = 100;
     this.maxHealth = 100;
 
-    // Touches unifiées identiques pour toutes les machines connectées
     this.pressed = { haut: false, bas: false, gauche: false, droite: false };
     this.lastHorizontal = "";
 
     this.projectiles = [];
     this.projectileSpeed = 8;
     this.projectileDamage = 10;
-    this.shotCooldown = false; // Bloque le spam de la touche A
+    this.shotCooldown = false;
 
-    if (this.isLocal) {
-      this._setupKeyboardListeners();
-    }
+    if (this.isLocal) this._setupKeyboardListeners();
   }
 
   _setupKeyboardListeners() {
@@ -52,15 +49,8 @@ class Player {
       if (key === "z") this.pressed.haut = true;
       if (key === "s") this.pressed.bas = true;
 
-      // TOUCHE A : Déclenchement manuel du tir
-      if (key === "a" && !this.shotCooldown) {
-        this.tirerManuel();
-      }
-
-      // TOUCHE E : Demande de création d'une boîte d'obstacle devant le joueur
-      if (key === "e") {
-        this.demanderPoseBoite();
-      }
+      if (key === "a" && !this.shotCooldown) this.tirerManuel();
+      if (key === "e") this.demanderPoseBoite();
     });
 
     window.addEventListener("keyup", (e) => {
@@ -74,34 +64,18 @@ class Player {
 
   tirerManuel() {
     this.shotCooldown = true;
-
-    // Positionnement initial précis du missile par rapport au sprite du joueur
     const pX = this.direction === "droite" ? this.x + 50 : this.x + 10;
-    const pY = this.y + 32;
-
-    const proj = { x: pX, y: pY, direction: this.direction };
+    const proj = { x: pX, y: this.y + 32, direction: this.direction };
     this.projectiles.push(proj);
 
-    // Envoi des informations du tir pour double vérification par le serveur
-    if (this.socket) {
-      this.socket.emit("action_tir", proj);
-    }
-
-    // Cooldown de cadence de tir de 400 millisecondes
-    setTimeout(() => (this.shotCooldown = false), 400);
+    if (this.socket) this.socket.emit("action_tir", proj);
+    setTimeout(() => (this.shotCooldown = false), 400); // Cadence de tir
   }
 
   demanderPoseBoite() {
-    // Calcule la position de la boîte juste devant le joueur selon sa direction
-    const distanceDevant = 50;
-    const boiteX =
-      this.direction === "droite"
-        ? this.x + distanceDevant
-        : this.x - distanceDevant;
-
-    if (this.socket) {
+    const boiteX = this.direction === "droite" ? this.x + 50 : this.x - 50;
+    if (this.socket)
       this.socket.emit("poser_boite", { x: boiteX, y: this.y + 12 });
-    }
   }
 
   checkCollision(futurX, futurY, obstacles) {
@@ -121,9 +95,8 @@ class Player {
         pDroite > obs.x &&
         pHaut < obs.y + obs.h &&
         pBas > obs.y
-      ) {
+      )
         return true;
-      }
     }
     return false;
   }
@@ -140,7 +113,6 @@ class Player {
 
       let détruit = false;
 
-      // Test d'impact sur les murs et boîtes dynamiques
       for (let obs of obstacles) {
         if (
           p.x < obs.x + obs.w &&
@@ -155,7 +127,6 @@ class Player {
       }
       if (détruit) continue;
 
-      // Test d'impact sur le joueur adverse (Uniquement géré localement par l'attaquant)
       if (this.isLocal && adversaires) {
         for (let adv of adversaires) {
           if (
@@ -165,12 +136,11 @@ class Player {
             p.y > adv.y &&
             p.y < adv.y + 64
           ) {
-            if (this.socket) {
+            if (this.socket)
               this.socket.emit("infliger_degat", {
                 cibleId: adv.id,
                 montant: this.projectileDamage,
               });
-            }
             this.projectiles.splice(i, 1);
             détruit = true;
             break;
@@ -178,15 +148,13 @@ class Player {
         }
       }
 
-      if (!détruit && (p.x < 0 || p.x > ctx.canvas.width)) {
+      if (!détruit && (p.x < 0 || p.x > ctx.canvas.width))
         this.projectiles.splice(i, 1);
-      }
     }
   }
 
   update(ctx, adversaires = [], obstacles = []) {
-    const sprite = document.querySelector(this.spriteClass);
-    if (!sprite || this.health <= 0) return;
+    if (this.health <= 0) return;
 
     if (this.isLocal) {
       let enMouvement = false;
@@ -199,7 +167,7 @@ class Player {
           (this.lastHorizontal === "gauche" || !this.pressed.droite));
       const bougeV = this.pressed.haut || this.pressed.bas;
 
-      if (bougeH && bougeV) vitesse /= Math.SQRT2; // Normalisation des déplacements diagonaux
+      if (bougeH && bougeV) vitesse /= Math.SQRT2;
 
       let futurX = this.x;
       let futurY = this.y;
@@ -232,26 +200,23 @@ class Player {
 
       if (!this.checkCollision(this.x, futurY, obstacles)) this.y = futurY;
 
-      enMouvement ? this.startAnim(sprite) : this.stopAnim(sprite);
+      enMouvement ? this.startAnim() : this.stopAnim();
 
-      // Transmission immédiate au serveur pour double validation
-      if (this.socket) {
+      if (this.socket)
         this.socket.emit("action_deplacement", {
           x: this.x,
           y: this.y,
           direction: this.direction,
         });
-      }
     }
 
-    // Gestion de l'affichage du joueur
     ctx.save();
     if (this.direction === "gauche") {
       ctx.translate(this.x + 64, this.y);
       ctx.scale(-1, 1);
-      ctx.drawImage(sprite, 0, 0, 64, 64);
+      ctx.drawImage(this.sprite, 0, 0, 64, 64);
     } else {
-      ctx.drawImage(sprite, this.x, this.y, 64, 64);
+      ctx.drawImage(this.sprite, this.x, this.y, 64, 64);
     }
     ctx.restore();
 
@@ -259,36 +224,30 @@ class Player {
     this.updateProjectiles(ctx, adversaires, obstacles);
   }
 
-  startAnim(sprite) {
-    if (!sprite || this.timerAnim !== null) return;
+  startAnim() {
+    if (this.timerAnim !== null) return;
     this.timerAnim = setInterval(() => {
       this.numFrame = this.numFrame >= this.maxFrames ? 1 : this.numFrame + 1;
-      sprite.src = `${this.spritePath}00${this.numFrame}.png`;
+      this.sprite.src = `${this.spritePath}00${this.numFrame}.png`;
     }, 100);
   }
 
-  stopAnim(sprite) {
-    if (!sprite || this.timerAnim === null) return;
+  stopAnim() {
+    if (this.timerAnim === null) return;
     clearInterval(this.timerAnim);
     this.timerAnim = null;
     this.numFrame = 0;
-    sprite.src = `${this.spritePath}000.png`;
+    this.sprite.src = `${this.spritePath}000.png`;
   }
 
   _drawHealthBar(ctx) {
-    const largeur = 50;
-    const hauteur = 6;
-    const barreX = this.x + 32 - largeur / 2;
-    const barreY = this.y - 12;
+    const grandeur = 50;
+    const barreX = this.x + 32 - grandeur / 2;
     const pct = Math.max(0, this.health / this.maxHealth);
-
     ctx.fillStyle = "#ff4c4c";
-    ctx.fillRect(barreX, barreY, largeur, hauteur);
+    ctx.fillRect(barreX, this.y - 12, grandeur, 6);
     ctx.fillStyle = "#32cd32";
-    ctx.fillRect(barreX, barreY, largeur * pct, hauteur);
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1;
-    ctx.strokeRect(barreX, barreY, largeur, hauteur);
+    ctx.fillRect(barreX, this.y - 12, grandeur * pct, 6);
   }
 
   isDead() {
