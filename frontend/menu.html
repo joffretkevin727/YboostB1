@@ -1,15 +1,14 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Spaceship - Battle</title>
-<link rel="stylesheet" href="/frontend/css/menu.css">
-<link rel="icon" type="image/png" href="/frontend/assets/icon.png">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spaceship - Battle</title>
+    <link rel="stylesheet" href="/frontend/css/menu.css" />
+    <link rel="icon" type="image/png" href="/frontend/assets/icon.png" />
     <script src="/frontend/script/menu.js" defer></script>
-</head>
-<body>
-
+  </head>
+  <body>
     <img
         class="background-img"
         src="/frontend/assets/background/fondmenu.png"
@@ -20,17 +19,16 @@
     <div class="sidebar"></div>
 
     <div class="main-content">
+      <img
+        class="title-img"
+        src="/frontend/assets/title-removebg-preview.png"
+        alt="Titre"
+      />
 
-        <img
-            class="title-img"
-            src="/frontend/assets/title.png"
-            alt="Titre">
-
-        <div class="menu-container">
-
-            <button class="menu-btn" type="button" data-action="pvp" style="--i:0;">
-                <span>Player VS Player</span>
-            </button>
+      <div class="menu-container">
+        <button class="menu-btn" type="button" data-action="pvp" style="--i: 0">
+          <span>Player VS Player</span>
+        </button>
 
             <button class="menu-btn" type="button" data-action="2pv2p" style="--i:1;">
                 <span>Team VS Team</span>
@@ -51,6 +49,5 @@
         </div>
 
     </div>
-
-</body>
+  </body>
 </html>

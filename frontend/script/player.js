@@ -10,7 +10,7 @@ class Player {
     this.skin = skin;
 
     // Chemin absolu pour le skin choisi
-    this.spritePath = `/frontend/assets/${skin}/`;
+    this.spritePath = `/frontend/assets/man/${skin}/`;
     this.sprite = new Image();
     this.sprite.src = `${this.spritePath}000.png`;
 

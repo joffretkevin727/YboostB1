@@ -90,54 +90,93 @@ canvas {
     transform: rotate(360deg);
   }
 }
-/* --- OVERLAY FIN DE PARTIE --- */
+/* ==========================================
+   OVERLAY FIN DE PARTIE (MAGNIFIQUE)
+   ========================================== */
 #overlay-endgame {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.9); /* Fond très sombre */
-  backdrop-filter: blur(10px);
-  z-index: 200; /* Passe par-dessus tout le reste */
+  width: 100vw;
+  height: 100vh;
+  background: rgba(
+    10,
+    10,
+    15,
+    0.85
+  ); /* Fond très sombre et légèrement bleuté */
+  backdrop-filter: blur(12px); /* Flou puissant en arrière-plan */
+  z-index: 200;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .endgame-content {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px; /* Espace propre entre l'image et les boutons */
+  /* Animation d'apparition avec un petit effet de rebond dynamique */
+  animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* On s'assure que tes images de victoire/défaite ne débordent pas de l'écran */
 #endgame-image {
-  max-width: 800px;
-  width: 90vw;
-  animation: popIn 0.5s ease-out;
+  max-width: 80vw;
+  max-height: 60vh; /* LA MAGIE EST ICI : l'image ne dépassera jamais 60% de ton écran */
+  object-fit: contain;
+  /* Effet de lueur (Glow) dorée autour de l'image */
+  filter: drop-shadow(0 0 25px rgba(255, 204, 0, 0.4));
 }
 
+/* Le conteneur pour aligner les deux boutons côte à côte */
+.endgame-buttons {
+  display: flex;
+  gap: 20px;
+}
+
+/* Base commune des boutons */
 .btn-action {
-  margin-top: 30px;
   padding: 15px 40px;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: bold;
-  background-color: #ffcc00;
-  border: 4px solid #fff;
-  border-radius: 8px;
+  border-radius: 50px; /* Boutons arrondis très modernes */
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.3s ease;
   font-family: sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.btn-action:hover {
-  background-color: #fff;
-  color: #000;
-  transform: scale(1.05);
+/* Style du bouton "REJOUER" (Principal) */
+.btn-primary {
+  background: linear-gradient(45deg, #ffcc00, #ff9900);
+  color: #111;
+  border: none;
+  box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-4px) scale(1.05); /* Le bouton se soulève au survol */
+  box-shadow: 0 8px 25px rgba(255, 204, 0, 0.6);
+}
+
+/* Style du bouton "RETOUR AU MENU" (Secondaire) */
+.btn-secondary {
+  background: transparent;
+  color: #fff;
+  border: 2px solid #fff;
+}
+
+.btn-secondary:hover {
+  background: #fff;
+  color: #111;
+  transform: translateY(-4px);
 }
 
 @keyframes popIn {
   0% {
-    transform: scale(0.5);
+    transform: scale(0.8);
     opacity: 0;
   }
   100% {

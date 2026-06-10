@@ -1,11 +1,13 @@
-// --- CONFIGURATION INITIALE ET SOCKET ---
+// ==========================================
+// 1. INITIALISATION DU MOTEUR GRAPHIQUE
+// ==========================================
 const canvas = document.getElementById("monCanvas");
 const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
+ctx.imageSmoothingEnabled = false; // Maintient le style Pixel Art net
 
 const socket = io();
 
-// --- VARIABLES D'ÉTAT GLOBALES ---
+// Variables d'état global du jeu
 let monRole = null;
 let monJoueurLocal = null;
 let listeJoueursAdverses = {};
@@ -13,98 +15,113 @@ let mapObstacles = [];
 let boitesPosees = [];
 let partieEnCours = false;
 
-let skinSelectionne = "skin1"; // Valeur par défaut pour le lobby
-let localPret = false; // État "Prêt" du joueur local
+// ==========================================
+// 2. GESTION DES OBSTACLES ET COLLIDERS
+// ==========================================
+function initialiserObstacles() {
+  const w = canvas.width;
+  const h = canvas.height;
+  const ep = 25; // Épaisseur des murs extérieurs
 
-// --- LOGIQUE DU LOBBY (GESTION MULTIJOUEUR) ---
+  return [
+    { x: 0, y: 0, w: w, h: ep }, // Mur du Haut
+    { x: 0, y: h - ep, w: w, h: ep }, // Mur du Bas
+    { x: 0, y: 0, w: ep, h: h }, // Mur de Gauche
+    { x: w - ep, y: 0, w: ep, h: h }, // Mur de Droite
 
-// Gère les clics sur les skins, le pseudo et le bouton Prêt
-function setupLobby() {
-  document.querySelectorAll(".skin-card").forEach((carte) => {
-    carte.addEventListener("click", () => {
-      document.querySelectorAll(".skin-card").forEach(c => c.classList.remove("selected"));
-      carte.classList.add("selected");
-      skinSelectionne = carte.getAttribute("data-skin");
-      
-      // Envoie le changement de skin au serveur en temps réel
-      socket.emit("update_lobby_info", { skin: skinSelectionne, pseudo: getPseudo() });
-    });
-  });
+    // --- LES OBSTACLES INTERNES ---
+    { x: 320, y: 310, w: 40, h: 80 }, // Pilier gauche mid haut
+    { x: 1260, y: 260, w: 40, h: 80 }, // Pilier droit mid haut
+    { x: 587, y: 760, w: 50, h: 80 }, // Pilier gauche mid bas
+    { x: 965, y: 760, w: 50, h: 80 }, // Pilier droit mid bas
+    { x: 520, y: 80, w: 40, h: 80 }, // Pilier haut gauche
+    { x: 1040, y: 80, w: 40, h: 80 }, // Pilier haut droit
+    { x: 100, y: 500, w: 140, h: 60 }, // Mur mid gauche gauche
+    { x: 1360, y: 330, w: 140, h: 60 }, // Mur droit haut
+    { x: 1360, y: 500, w: 140, h: 60 }, // Mur droit bas
 
-  const btnPret = document.getElementById("btn-pret");
-  btnPret.addEventListener("click", () => {
-    localPret = !localPret;
-    if (localPret) {
-      btnPret.innerText = "Prêt";
-      btnPret.style.backgroundColor = "#2ecc71";
-    } else {
-      btnPret.innerText = "En attente";
-      btnPret.style.backgroundColor = "#ffcc00";
-    }
-    socket.emit("joueur_statut_pret", { pret: localPret, pseudo: getPseudo(), skin: skinSelectionne });
-  });
+    // -- mid --
+    { x: 510, y: 225, w: 240, h: 60 }, // Mur mid haut gauche horizontal
+    { x: 510, y: 280, w: 25, h: 110 }, // Mur mid haut gauche vertical
+    { x: 960, y: 210, w: 130, h: 70 }, // Mur mid haut droit horizontal
+    { x: 1060, y: 280, w: 25, h: 105 }, // Mur mid haut droit vertical
+    { x: 510, y: 510, w: 25, h: 100 }, // Mur mid bas gauche vertical
+    { x: 1060, y: 510, w: 25, h: 100 }, // Mur mid bas droit vertical
+    { x: 350, y: 610, w: 150, h: 60 }, // Mur mid bas gauche horizontal
+    { x: 345, y: 500, w: 40, h: 170 }, // Mur mid bas gauche gauche vertical
+    { x: 1100, y: 610, w: 150, h: 70 }, // Mur mid bas droit horizontal
+    { x: 850, y: 620, w: 110, h: 60 }, // Mur mid bas droit droit horizontal
+    { x: 745, y: 640, w: 110, h: 40 }, // Mur mid bas droit gauche horizontal
 
-  document.getElementById("pseudo-local").addEventListener("input", () => {
-    socket.emit("update_lobby_info", { skin: skinSelectionne, pseudo: getPseudo() });
-  });
+    // -- contours --
+    { x: 20, y: 20, w: 2000, h: 90 }, // haut
+    { x: 20, y: 800, w: 2000, h: 90 }, // bas
+    { x: 20, y: 20, w: 100, h: 1000 }, // gauche
+    { x: 1470, y: 20, w: 100, h: 1000 }, // droit
+  ];
+}
+mapObstacles = initialiserObstacles();
+
+// Outil de debug pour afficher les collisions en rouge
+function debugDessinerHitboxes(ctx) {
+  // Mis sur 0 d'opacité pour cacher les murs rouges, mets 0.4 si tu veux les revoir
+  ctx.fillStyle = "rgba(255, 0, 0, 0)";
+  const tousLesObstacles = [...mapObstacles, ...boitesPosees];
+  for (let obs of tousLesObstacles) ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
 }
 
-// Retourne le pseudo saisi ou un nom générique
-function getPseudo() {
-  return document.getElementById("pseudo-local").value.trim() || "Joueur Local";
-}
-
-// Réception des mises à jour des états des joueurs dans le lobby
-socket.on("mise_a_jour_lobby", (reponseServeur) => {
-  const ids = Object.keys(reponseServeur);
-  const adversaireId = ids.find(id => id !== socket.id);
-
-  if (adversaireId) {
-    const adv = reponseServeur[adversaireId];
-    document.getElementById("pseudo-distant").innerText = adv.pseudo || "Adversaire";
-    document.getElementById("preview-p2").innerText = adv.skin || "?";
-    document.getElementById("statut-p2").innerText = adv.pret ? "Prêt" : "Pas prêt";
-    document.getElementById("statut-p2").style.color = adv.pret ? "#2ecc71" : "#ff3333";
-  } else {
-    document.getElementById("pseudo-distant").innerText = "En attente d'un joueur...";
-    document.getElementById("preview-p2").innerText = "?";
-    document.getElementById("statut-p2").innerText = "Pas prêt";
-    document.getElementById("statut-p2").style.color = "#ff3333";
-  }
-});
-
-// Déclenchement visuel du décompte avant le match
-socket.on("declencher_decompte", () => {
-  const overlayCountdown = document.getElementById("overlay-countdown");
-  const countdownText = document.getElementById("countdown-text");
-  overlayCountdown.classList.remove("hidden");
-
-  let tempsRestant = 5;
-  countdownText.innerText = `Lancement dans ${tempsRestant}`;
-
-  const interval = setInterval(() => {
-    tempsRestant--;
-    if (tempsRestant > 0) {
-      countdownText.innerText = `Lancement dans ${tempsRestant}`;
-    } else {
-      clearInterval(interval);
-      countdownText.innerText = "C'est parti !";
-    }
-  }, 1000);
-});
-
-// --- ENTRÉE DANS L'ARÈNE ET JEU ---
+// ==========================================
+// 3. LOGIQUE RÉSEAU ET MATCHMAKING
+// ==========================================
 
 socket.on("init_base", (data) => {
   monRole = data.role;
   boitesPosees = data.boites;
-  setupLobby();
+  setupSelecteurSkins();
+});
+
+function setupSelecteurSkins() {
+  const cartesSkins = document.querySelectorAll(".skin-card");
+
+  if (cartesSkins.length === 0) {
+    console.error(
+      "❌ ERREUR : Impossible de trouver .skin-card dans le HTML !",
+    );
+    return;
+  }
+
+  console.log(
+    "✅ Attachement des clics sur les",
+    cartesSkins.length,
+    "cartes de skins.",
+  );
+
+  cartesSkins.forEach((carte) => {
+    carte.addEventListener("click", () => {
+      const skinChoisi = carte.getAttribute("data-skin");
+      console.log("👉 Skin choisi par clic :", skinChoisi);
+
+      // Cache la sélection, affiche la file d'attente
+      document.getElementById("box-selection").classList.add("hidden");
+      document.getElementById("box-file-attente").classList.remove("hidden");
+
+      // Informe le serveur du choix
+      socket.emit("choix_skin_valide", { skin: skinChoisi });
+    });
+  });
+}
+
+socket.on("attente_file", (data) => {
+  const texte = document.getElementById("statut-file");
+  if (texte)
+    texte.innerText = `Joueurs prêts : ${data.connectes}/2. En attente...`;
 });
 
 socket.on("lancement_partie", (serveurJoueurs) => {
-  document.getElementById("lobby-container").classList.add("hidden");
-  document.getElementById("overlay-countdown").classList.add("hidden");
-  
+  // Ferme le lobby
+  document.getElementById("overlay-lobby").classList.add("hidden");
+
+  // Génère les entités des joueurs
   for (let id in serveurJoueurs) {
     const sj = serveurJoueurs[id];
     if (id === socket.id) {
@@ -128,8 +145,10 @@ socket.on("lancement_partie", (serveurJoueurs) => {
   partieEnCours = true;
 });
 
+// Synchronisation des déplacements
 socket.on("mise_a_jour_joueurs", (serveurJoueurs) => {
   if (!partieEnCours) return;
+
   for (let id in serveurJoueurs) {
     const sj = serveurJoueurs[id];
     if (id === socket.id) {
@@ -141,11 +160,14 @@ socket.on("mise_a_jour_joueurs", (serveurJoueurs) => {
       listeJoueursAdverses[id].health = sj.health;
     }
   }
+
+  // Nettoyage des déconnexions
   for (let id in listeJoueursAdverses) {
     if (!serveurJoueurs[id]) delete listeJoueursAdverses[id];
   }
 });
 
+// Réception des tirs adverses
 socket.on("remote_tir", (data) => {
   if (partieEnCours && listeJoueursAdverses[data.ownerId]) {
     listeJoueursAdverses[data.ownerId].projectiles.push({
@@ -156,56 +178,54 @@ socket.on("remote_tir", (data) => {
   }
 });
 
+// Ajout d'obstacles dynamiques
 socket.on("nouvelle_boite_ajoutee", (boite) => boitesPosees.push(boite));
 
-// --- GESTION DE LA CARTE, DES OBSTACLES ET DESSIN ---
+// ==========================================
+// 4. GESTION DE LA FIN DE PARTIE
+// ==========================================
+socket.on("fin_de_partie", (data) => {
+  partieEnCours = false; // Fige les déplacements et les mises à jour
 
-function initialiserObstacles() {
-  const w = canvas.width;
-  const h = canvas.height;
-  const epaisseur = 25;
-  return [
-    { x: 0, y: 0, w: w, h: epaisseur }, 
-    { x: 0, y: h - epaisseur, w: w, h: epaisseur }, 
-    { x: 0, y: 0, w: epaisseur, h: h }, 
-    { x: w - epaisseur, y: 0, w: epaisseur, h: h }, 
+  const overlayEnd = document.getElementById("overlay-endgame");
+  const imgEnd = document.getElementById("endgame-image");
 
-    { x: 320, y: 310, w: 40, h: 80 }, 
-    { x: 1260, y: 260, w: 40, h: 80 }, 
-    { x: 587, y: 760, w: 50, h: 80 }, 
-    { x: 965, y: 760, w: 50, h: 80 }, 
-    { x: 520, y: 80, w: 40, h: 80 }, 
-    { x: 1040, y: 80, w: 40, h: 80 }, 
-    { x: 100, y: 500, w: 140, h: 60 }, 
-    { x: 1360, y: 330, w: 140, h: 60 }, 
-    { x: 1360, y: 500, w: 140, h: 60 }, 
+  if (!overlayEnd || !imgEnd || !monJoueurLocal) return;
 
-    { x: 510, y: 225, w: 240, h: 60 }, 
-    { x: 510, y: 280, w: 25, h: 110 }, 
-    { x: 960, y: 210, w: 130, h: 70 }, 
-    { x: 1060, y: 280, w: 25, h: 105 }, 
-    { x: 510, y: 510, w: 25, h: 100 }, 
-    { x: 1060, y: 510, w: 25, h: 100 }, 
-    { x: 350, y: 610, w: 150, h: 60 }, 
-    { x: 345, y: 500, w: 40, h: 170 }, 
-    { x: 1100, y: 610, w: 150, h: 70 }, 
-    { x: 850, y: 620, w: 110, h: 60 }, 
-    { x: 745, y: 640, w: 110, h: 40 }, 
+  // Récupération fiable du skin depuis l'instance locale
+  const monSkin = monJoueurLocal.skin;
 
-    { x: 20, y: 20, w: 2000, h: 90 }, 
-    { x: 20, y: 800, w: 2000, h: 90 }, 
-    { x: 20, y: 20, w: 100, h: 1000 }, 
-    { x: 1470, y: 20, w: 100, h: 1000 }, 
-  ];
-}
-mapObstacles = initialiserObstacles();
+  // Détermination de l'image de fin (Victoire ou Défaite)
+  if (socket.id === data.vainqueurId) {
+    imgEnd.src = `/frontend/assets/party/win/win_${monSkin}.png`;
+  } else {
+    imgEnd.src = `/frontend/assets/party/defeat/defeat_${monSkin}.png`;
+  }
 
-function debugDessinerHitboxes(ctx) {
-  ctx.fillStyle = "rgba(255, 0, 0, 0)";
-  const tousLesObstacles = [...mapObstacles, ...boitesPosees];
-  for (let obs of tousLesObstacles) ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+  // On affiche l'écran de fin par-dessus l'arène
+  overlayEnd.classList.remove("hidden");
+});
+
+// --- ÉCOUTEURS DES DEUX BOUTONS DE FIN ---
+
+const btnRejouer = document.getElementById("btn-rejouer");
+if (btnRejouer) {
+  btnRejouer.addEventListener("click", () => {
+    // Relance la page : ça réinitialise le jeu et te remet dans le lobby
+    window.location.reload();
+  });
 }
 
+const btnRetourMenu = document.getElementById("btn-retour-menu");
+if (btnRetourMenu) {
+  btnRetourMenu.addEventListener("click", () => {
+    window.location.href = "/menu";
+  });
+}
+
+// ==========================================
+// 5. RENDU DU PREMIER PLAN (PROFONDEUR 2.5D)
+// ==========================================
 const piliersForeground = [
   { id: "img-pilier1", x: 320, y: 219, w: 35, h: 170 },
   { id: "img-pilier2", x: 1260, y: 221, w: 40, h: 110 },
@@ -216,58 +236,56 @@ const piliersForeground = [
 ];
 
 function dessinerPremierPlan(ctx) {
+  // 1. Dessin des structures murales de premier plan
   for (let p of piliersForeground) {
     const img = document.getElementById(p.id);
     if (img) ctx.drawImage(img, p.x, p.y, p.w, p.h);
   }
+  // 2. Rendu des boîtes d'obstacles dynamiques posées par les joueurs
   const imgBox = document.getElementById("img-box");
   if (imgBox) {
-    for (let b of boitesPosees) ctx.drawImage(imgBox, b.x, b.y, b.w, b.h);
+    for (let b of boitesPosees) {
+      ctx.drawImage(imgBox, b.x, b.y, b.w, b.h);
+    }
   }
 }
 
-// --- FIN DE PARTIE ---
-
-socket.on("fin_de_partie", (data) => {
-  partieEnCours = false;
-  const overlayEnd = document.getElementById("overlay-endgame");
-  const imgEnd = document.getElementById("endgame-image");
-  const monSkin = monJoueurLocal.spritePath.split("/")[3]; 
-
-  if (socket.id === data.vainqueurId) {
-    imgEnd.src = `/frontend/assets/party/win/win_${monSkin}.png`;
-  } else {
-    imgEnd.src = `/frontend/assets/party/defeat/defeat_${monSkin}.png`;
-  }
-  overlayEnd.classList.remove("hidden");
-});
-
-document.getElementById("btn-retour-menu").addEventListener("click", () => {
-  window.location.href = "/menu";
-});
-
-// --- BOUCLE DE RENDU PRINCIPALE ---
-
+// ==========================================
+// 6. BOUCLE DE RENDU PRINCIPALE (MOTEUR)
+// ==========================================
 function gameLoop() {
+  // Nettoyage de l'écran précédent
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Dessin du sol/décor de fond arrière
   dessinerMap(ctx, canvas);
+
+  // Outil d'affichage des hitboxes (Utile pour caler tes murs)
   debugDessinerHitboxes(ctx);
 
   if (partieEnCours) {
     const tousLesObstacles = [...mapObstacles, ...boitesPosees];
     const adversairesTableau = Object.values(listeJoueursAdverses);
 
+    // Mise à jour de l'entité locale du joueur connecté
     if (monJoueurLocal && !monJoueurLocal.isDead()) {
       monJoueurLocal.update(ctx, adversairesTableau, tousLesObstacles);
     }
+
+    // Rendu passif des instances des joueurs distants reçus du réseau
     for (let id in listeJoueursAdverses) {
-      if (!listeJoueursAdverses[id].isDead())
+      if (!listeJoueursAdverses[id].isDead()) {
         listeJoueursAdverses[id].update(ctx, [], tousLesObstacles);
+      }
     }
+
+    // Ajout de la couche supérieure (Piliers + caisses) par-dessus les joueurs
     dessinerPremierPlan(ctx);
   }
 
+  // Demande au navigateur d'exécuter la boucle à 60 FPS
   requestAnimationFrame(gameLoop);
 }
 
+// Lancement automatique du moteur graphique dès que la page HTML est prête
 window.onload = () => gameLoop();
