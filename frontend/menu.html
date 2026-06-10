@@ -4,17 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Arena - Battle Game</title>
+    <link rel="stylesheet" href="../frontend/css/menu.css">
 </head>
 
 <body>
-    <div class="title">
-        <img src="../frontend/assets/title.png">
+    <div class="menu-container">
+        <h1 class="title">ARENA</h1>
+        <div class="buttons-container">
+            <a href="/ingame" class="play-btn">1v1</a>
+            <a href="/ingame" class="play-btn">Bot</a>
+        </div>
+        <p class="subtitle">Prepare for Battle</p>
     </div>
-    <form action="/ingame">
-        <button class="1vs1">1vs1</button>
-        <button class="vsbot">vsbot</button>
-    </form>
+    
     <script src="../frontend/script/menu.js"></script>
     <script src="../frontend/script/arene.js"></script>
     <script src="../frontend/script/player.js"></script>

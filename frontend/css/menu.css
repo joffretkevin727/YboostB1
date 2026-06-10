@@ -1,0 +1,117 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 600px;
+    height: 100%;
+    background-image: url('../assets/man/001.png');
+    background-repeat: no-repeat;
+    background-position: bottom right;
+    background-size: contain;
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.menu-container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    animation: fadeIn 0.8s ease-in;
+    position: relative;
+    z-index: 10;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.title {
+    font-size: 6rem;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 30px rgba(16, 213, 200, 0.8), 0 0 60px rgba(16, 213, 200, 0.4);
+    letter-spacing: 0.1em;
+    animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+    0%, 100% {
+        text-shadow: 0 0 30px rgba(16, 213, 200, 0.8), 0 0 60px rgba(16, 213, 200, 0.4);
+    }
+    50% {
+        text-shadow: 0 0 50px rgba(16, 213, 200, 1), 0 0 80px rgba(16, 213, 200, 0.6);
+    }
+}
+
+.play-btn {
+    padding: 1.2rem 3rem;
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(135deg, #10d5c8 0%, #00a896 100%);
+    border: 2px solid #10d5c8;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 0 20px rgba(16, 213, 200, 0.5);
+    text-decoration: none;
+    display: inline-block;
+}
+
+.play-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 40px rgba(16, 213, 200, 0.8);
+    background: linear-gradient(135deg, #00a896 0%, #10d5c8 100%);
+}
+
+.play-btn:active {
+    transform: scale(0.95);
+}
+
+.buttons-container {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    color: #a8a8a8;
+    letter-spacing: 0.02em;
+    margin-top: 2rem;
+    opacity: 0.8;
+}
