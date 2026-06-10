@@ -1,9 +1,13 @@
+// ==========================================
+// 1. INITIALISATION DU MOTEUR GRAPHIQUE
+// ==========================================
 const canvas = document.getElementById("monCanvas");
 const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
+ctx.imageSmoothingEnabled = false; // Maintient le style Pixel Art net
 
 const socket = io();
 
+// Variables d'état global du jeu
 let monRole = null;
 let monJoueurLocal = null;
 let listeJoueursAdverses = {};
@@ -11,16 +15,19 @@ let mapObstacles = [];
 let boitesPosees = [];
 let partieEnCours = false;
 
-// Initialisation de tes collisions internes
+// ==========================================
+// 2. GESTION DES OBSTACLES ET COLLIDERS
+// ==========================================
 function initialiserObstacles() {
   const w = canvas.width;
   const h = canvas.height;
-  const epaisseur = 25;
+  const ep = 25; // Épaisseur des murs extérieurs
+
   return [
-    { x: 0, y: 0, w: w, h: epaisseur }, // Mur du Haut
-    { x: 0, y: h - epaisseur, w: w, h: epaisseur }, // Mur du Bas
-    { x: 0, y: 0, w: epaisseur, h: h }, // Mur de Gauche
-    { x: w - epaisseur, y: 0, w: epaisseur, h: h }, // Mur de Droite
+    { x: 0, y: 0, w: w, h: ep }, // Mur du Haut
+    { x: 0, y: h - ep, w: w, h: ep }, // Mur du Bas
+    { x: 0, y: 0, w: ep, h: h }, // Mur de Gauche
+    { x: w - ep, y: 0, w: ep, h: h }, // Mur de Droite
 
     // --- LES OBSTACLES INTERNES ---
     { x: 320, y: 310, w: 40, h: 80 }, // Pilier gauche mid haut
@@ -55,12 +62,17 @@ function initialiserObstacles() {
 }
 mapObstacles = initialiserObstacles();
 
-// OUTIL DE DEBUG : Dessine les Hitboxes pour t'aider à les caler sur le vaisseau
+// Outil de debug pour afficher les collisions en rouge
 function debugDessinerHitboxes(ctx) {
+  // Mis sur 0 d'opacité pour cacher les murs rouges, mets 0.4 si tu veux les revoir
   ctx.fillStyle = "rgba(255, 0, 0, 0)";
   const tousLesObstacles = [...mapObstacles, ...boitesPosees];
   for (let obs of tousLesObstacles) ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
 }
+
+// ==========================================
+// 3. LOGIQUE RÉSEAU ET MATCHMAKING
+// ==========================================
 
 socket.on("init_base", (data) => {
   monRole = data.role;
@@ -69,23 +81,47 @@ socket.on("init_base", (data) => {
 });
 
 function setupSelecteurSkins() {
-  document.querySelectorAll(".skin-card").forEach((carte) => {
+  const cartesSkins = document.querySelectorAll(".skin-card");
+
+  if (cartesSkins.length === 0) {
+    console.error(
+      "❌ ERREUR : Impossible de trouver .skin-card dans le HTML !",
+    );
+    return;
+  }
+
+  console.log(
+    "✅ Attachement des clics sur les",
+    cartesSkins.length,
+    "cartes de skins.",
+  );
+
+  cartesSkins.forEach((carte) => {
     carte.addEventListener("click", () => {
       const skinChoisi = carte.getAttribute("data-skin");
+      console.log("👉 Skin choisi par clic :", skinChoisi);
+
+      // Cache la sélection, affiche la file d'attente
       document.getElementById("box-selection").classList.add("hidden");
       document.getElementById("box-file-attente").classList.remove("hidden");
+
+      // Informe le serveur du choix
       socket.emit("choix_skin_valide", { skin: skinChoisi });
     });
   });
 }
 
 socket.on("attente_file", (data) => {
-  document.getElementById("statut-file").innerText =
-    `Joueurs prêts : ${data.connectes}/2. En attente...`;
+  const texte = document.getElementById("statut-file");
+  if (texte)
+    texte.innerText = `Joueurs prêts : ${data.connectes}/2. En attente...`;
 });
 
 socket.on("lancement_partie", (serveurJoueurs) => {
+  // Ferme le lobby
   document.getElementById("overlay-lobby").classList.add("hidden");
+
+  // Génère les entités des joueurs
   for (let id in serveurJoueurs) {
     const sj = serveurJoueurs[id];
     if (id === socket.id) {
@@ -109,8 +145,10 @@ socket.on("lancement_partie", (serveurJoueurs) => {
   partieEnCours = true;
 });
 
+// Synchronisation des déplacements
 socket.on("mise_a_jour_joueurs", (serveurJoueurs) => {
   if (!partieEnCours) return;
+
   for (let id in serveurJoueurs) {
     const sj = serveurJoueurs[id];
     if (id === socket.id) {
@@ -122,11 +160,14 @@ socket.on("mise_a_jour_joueurs", (serveurJoueurs) => {
       listeJoueursAdverses[id].health = sj.health;
     }
   }
+
+  // Nettoyage des déconnexions
   for (let id in listeJoueursAdverses) {
     if (!serveurJoueurs[id]) delete listeJoueursAdverses[id];
   }
 });
 
+// Réception des tirs adverses
 socket.on("remote_tir", (data) => {
   if (partieEnCours && listeJoueursAdverses[data.ownerId]) {
     listeJoueursAdverses[data.ownerId].projectiles.push({
@@ -137,8 +178,54 @@ socket.on("remote_tir", (data) => {
   }
 });
 
+// Ajout d'obstacles dynamiques
 socket.on("nouvelle_boite_ajoutee", (boite) => boitesPosees.push(boite));
 
+// ==========================================
+// 4. GESTION DE LA FIN DE PARTIE
+// ==========================================
+socket.on("fin_de_partie", (data) => {
+  partieEnCours = false; // Fige les déplacements et les mises à jour
+
+  const overlayEnd = document.getElementById("overlay-endgame");
+  const imgEnd = document.getElementById("endgame-image");
+
+  if (!overlayEnd || !imgEnd || !monJoueurLocal) return;
+
+  // Récupération fiable du skin depuis l'instance locale
+  const monSkin = monJoueurLocal.skin;
+
+  // Détermination de l'image de fin (Victoire ou Défaite)
+  if (socket.id === data.vainqueurId) {
+    imgEnd.src = `/frontend/assets/party/win/win_${monSkin}.png`;
+  } else {
+    imgEnd.src = `/frontend/assets/party/defeat/defeat_${monSkin}.png`;
+  }
+
+  // On affiche l'écran de fin par-dessus l'arène
+  overlayEnd.classList.remove("hidden");
+});
+
+// --- ÉCOUTEURS DES DEUX BOUTONS DE FIN ---
+
+const btnRejouer = document.getElementById("btn-rejouer");
+if (btnRejouer) {
+  btnRejouer.addEventListener("click", () => {
+    // Relance la page : ça réinitialise le jeu et te remet dans le lobby
+    window.location.reload();
+  });
+}
+
+const btnRetourMenu = document.getElementById("btn-retour-menu");
+if (btnRetourMenu) {
+  btnRetourMenu.addEventListener("click", () => {
+    window.location.href = "/menu";
+  });
+}
+
+// ==========================================
+// 5. RENDU DU PREMIER PLAN (PROFONDEUR 2.5D)
+// ==========================================
 const piliersForeground = [
   { id: "img-pilier1", x: 320, y: 219, w: 35, h: 170 },
   { id: "img-pilier2", x: 1260, y: 221, w: 40, h: 110 },
@@ -149,71 +236,56 @@ const piliersForeground = [
 ];
 
 function dessinerPremierPlan(ctx) {
+  // 1. Dessin des structures murales de premier plan
   for (let p of piliersForeground) {
     const img = document.getElementById(p.id);
     if (img) ctx.drawImage(img, p.x, p.y, p.w, p.h);
   }
+  // 2. Rendu des boîtes d'obstacles dynamiques posées par les joueurs
   const imgBox = document.getElementById("img-box");
   if (imgBox) {
-    for (let b of boitesPosees) ctx.drawImage(imgBox, b.x, b.y, b.w, b.h);
+    for (let b of boitesPosees) {
+      ctx.drawImage(imgBox, b.x, b.y, b.w, b.h);
+    }
   }
 }
 
-// --- GESTION DE LA FIN DE PARTIE ---
-socket.on("fin_de_partie", (data) => {
-  // 1. On fige le jeu en passant la variable à false
-  partieEnCours = false;
-
-  const overlayEnd = document.getElementById("overlay-endgame");
-  const imgEnd = document.getElementById("endgame-image");
-
-  // On récupère le skin de notre joueur (ex: "skin1", "skin2")
-  // Note: on y accède via notre instance Player locale, qu'on stockait dans this.spritePath,
-  // mais on peut le retrouver directement s'il a été passé.
-  // Pour être sûr, on utilise le chemin de l'image coupé pour retrouver le nom :
-  const monSkin = monJoueurLocal.spritePath.split("/")[3]; // Récupère le mot "skin1", etc.
-
-  // 2. On vérifie si c'est NOUS le vainqueur
-  if (socket.id === data.vainqueurId) {
-    // VICTOIRE : On charge l'image win du skin
-    imgEnd.src = `/frontend/assets/party/win/win_${monSkin}.png`;
-  } else {
-    // DÉFAITE : On charge l'image defeat du skin
-    imgEnd.src = `/frontend/assets/party/defeat/defeat_${monSkin}.png`;
-  }
-
-  // 3. On affiche l'écran de fin
-  overlayEnd.classList.remove("hidden");
-});
-
-// Action du bouton "Retour au Menu"
-document.getElementById("btn-retour-menu").addEventListener("click", () => {
-  // On recharge la page proprement pour se déconnecter et retourner au menu
-  window.location.href = "/menu";
-});
-
+// ==========================================
+// 6. BOUCLE DE RENDU PRINCIPALE (MOTEUR)
+// ==========================================
 function gameLoop() {
+  // Nettoyage de l'écran précédent
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Dessin du sol/décor de fond arrière
   dessinerMap(ctx, canvas);
 
-  // ACTIVÉ : Tu verras tes murs en rouge. Tu pourras supprimer cette ligne quand tes murs seront alignés.
+  // Outil d'affichage des hitboxes (Utile pour caler tes murs)
   debugDessinerHitboxes(ctx);
 
   if (partieEnCours) {
     const tousLesObstacles = [...mapObstacles, ...boitesPosees];
     const adversairesTableau = Object.values(listeJoueursAdverses);
 
+    // Mise à jour de l'entité locale du joueur connecté
     if (monJoueurLocal && !monJoueurLocal.isDead()) {
       monJoueurLocal.update(ctx, adversairesTableau, tousLesObstacles);
     }
+
+    // Rendu passif des instances des joueurs distants reçus du réseau
     for (let id in listeJoueursAdverses) {
-      if (!listeJoueursAdverses[id].isDead())
+      if (!listeJoueursAdverses[id].isDead()) {
         listeJoueursAdverses[id].update(ctx, [], tousLesObstacles);
+      }
     }
+
+    // Ajout de la couche supérieure (Piliers + caisses) par-dessus les joueurs
     dessinerPremierPlan(ctx);
   }
 
+  // Demande au navigateur d'exécuter la boucle à 60 FPS
   requestAnimationFrame(gameLoop);
 }
 
+// Lancement automatique du moteur graphique dès que la page HTML est prête
 window.onload = () => gameLoop();
