@@ -26,21 +26,20 @@ app.get("/ingame", (req, res) =>
 );
 
 io.on("connection", (socket) => {
-  // --- NOUVEAU : On limite à 2 joueurs max ! ---
   if (Object.keys(joueursConnectes).length >= 2) {
-    console.log(`❌ Rejeté : Serveur plein (${socket.id})`);
-    socket.emit("serveur_plein"); // On prévient le client
-    socket.disconnect(); // On lui coupe la connexion
+    socket.emit("serveur_plein");
+    socket.disconnect();
     return;
   }
 
-  console.log(`🟢 Joueur connecté : ${socket.id}`);
+  console.log(`🟢 Session connectée : ${socket.id}`);
 
   let role = "j1";
   if (Object.values(joueursConnectes).some((j) => j.role === "j1")) {
     role = "j2";
   }
 
+  // État initial : le joueur n'a pas encore choisi son skin et n'est pas prêt
   joueursConnectes[socket.id] = {
     id: socket.id,
     role: role,
@@ -48,15 +47,42 @@ io.on("connection", (socket) => {
     y: role === "j1" ? 150 : MAP_H - 200,
     direction: role === "j1" ? "droite" : "gauche",
     health: 100,
-    mursPoses: 0, // NOUVEAU : Compteur de murs initialisé à 0
+    mursPoses: 0,
+    skin: null,
+    ready: false,
   };
 
-  socket.emit("init_role", { role: role, boites: boitesDynamiques });
-  io.emit("mise_a_jour_joueurs", joueursConnectes);
+  // Envoi des données de base (les boîtes déjà existantes s'il y en a)
+  socket.emit("init_base", { role: role, boites: boitesDynamiques });
 
+  // Événement quand un joueur valide son skin depuis l'interface
+  socket.on("choix_skin_valide", (data) => {
+    const j = joueursConnectes[socket.id];
+    if (!j) return;
+
+    j.skin = data.skin; // Ex: "skin1", "skin2", "skin3", "skin4"
+    j.ready = true;
+
+    console.log(`👤 ${socket.id} (${j.role}) a choisi le skin : ${data.skin}`);
+
+    // On vérifie si on a 2 joueurs connectés ET que les deux sont prêts
+    const tousLesJoueurs = Object.values(joueursConnectes);
+    if (
+      tousLesJoueurs.length === 2 &&
+      tousLesJoueurs.every((p) => p.ready === true)
+    ) {
+      console.log("⚔️ Les deux joueurs sont prêts. Lancement de la partie !");
+      io.emit("lancement_partie", joueursConnectes);
+    } else {
+      // Sinon, on notifie qu'on attend toujours dans la file d'attente
+      io.emit("attente_file", { connectes: tousLesJoueurs.length });
+    }
+  });
+
+  // Déplacements avec double vérification
   socket.on("action_deplacement", (data) => {
     const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0) return;
+    if (!j || j.health <= 0 || !j.ready) return;
 
     if (
       data.x >= REBORD &&
@@ -71,9 +97,10 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Tirs avec double vérification
   socket.on("action_tir", (data) => {
     const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0) return;
+    if (!j || j.health <= 0 || !j.ready) return;
 
     socket.broadcast.emit("remote_tir", {
       ownerId: socket.id,
@@ -83,6 +110,7 @@ io.on("connection", (socket) => {
     });
   });
 
+  // Dégâts avec double vérification
   socket.on("infliger_degat", (data) => {
     const cible = joueursConnectes[data.cibleId];
     if (cible && cible.health > 0) {
@@ -91,14 +119,10 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Poser une boîte (max 5) avec double vérification
   socket.on("poser_boite", (data) => {
     const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0) return;
-
-    // --- NOUVEAU : Vérification de la limite des 5 murs ---
-    if (j.mursPoses >= 5) {
-      return; // On bloque la création si la limite est atteinte
-    }
+    if (!j || j.health <= 0 || j.mursPoses >= 5 || !j.ready) return;
 
     const tropProche = boitesDynamiques.some(
       (b) => Math.hypot(b.x - data.x, b.y - data.y) < 30,
@@ -107,22 +131,21 @@ io.on("connection", (socket) => {
     if (!tropProche) {
       const nouvelleBoite = { x: data.x, y: data.y, w: 40, h: 40 };
       boitesDynamiques.push(nouvelleBoite);
-      j.mursPoses++; // On incrémente son compteur
+      j.mursPoses++;
       io.emit("nouvelle_boite_ajoutee", nouvelleBoite);
     }
   });
 
   socket.on("disconnect", () => {
-    console.log(`🔴 Joueur déconnecté : ${socket.id}`);
+    console.log(`🔴 Session déconnectée : ${socket.id}`);
     delete joueursConnectes[socket.id];
     if (Object.keys(joueursConnectes).length === 0) {
-      boitesDynamiques = []; // Nettoyage total de la map
+      boitesDynamiques = [];
     }
     io.emit("mise_a_jour_joueurs", joueursConnectes);
   });
 });
 
-// NOUVEAU : On écoute sur "0.0.0.0" pour accepter les connexions d'autres PC
 server.listen(6969, "0.0.0.0", () => {
-  console.log("🚀 Serveur Multijoueur actif sur le port 6969 !");
+  console.log("🚀 Serveur Multijoueur actif sur : http://localhost:6969/menu");
 });
