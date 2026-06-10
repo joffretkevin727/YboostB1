@@ -1,37 +1,30 @@
-/* 1. On donne au body la taille de l'écran et on centre son contenu */
+/* Style de réinitialisation complet de la page de rendu */
 body {
   margin: 0;
-  height: 100vh; /* 100% de la hauteur de la fenêtre */
-  display: flex; /* Active le mode Flexbox */
-  justify-content: center; /* Centre horizontalement */
-  align-items: center; /* Centre verticalement */
-  background-color: #111; /* Petit fond sombre derrière la map */
-  overflow: hidden; /* Enlève les barres de défilement (scroll) */
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgb(17, 17, 17);
+  overflow: hidden;
 }
 
-/* 2. On dit au canvas de prendre le max de place sans dépasser, et en gardant le ratio */
+/* Redimensionnement automatique de la zone graphique du Canvas */
 canvas {
-  /* On force le canvas à essayer de prendre tout l'écran */
   width: 100vw;
   height: 100vh;
-
-  /* La vraie magie : demande au navigateur de redimensionner le jeu 
-       pour qu'il rentre entièrement dans l'écran sans se déformer (Letterbox) */
   object-fit: contain;
-
-  /* Pour garder les pixels nets comme sur ta capture ! */
-  image-rendering: pixelated;
-
-  /* On peut garder ton fond rouge pour voir s'il y a un décalage, mais tu pourras l'enlever */
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated; /* Maintient les bords des sprites parfaitement nets */
   background: rgb(0, 0, 0);
 }
-/* On cache les images qui servent d'assets au jeu */
+
+/* Cache pour masquer les banques d'images HTML natives */
 .j1,
 .j2,
-.arena {
-  display: none;
-}
-
+.arena,
 .asset-cache {
   display: none;
 }

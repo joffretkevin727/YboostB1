@@ -1,17 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <title>Document</title>
-    <link rel="stylesheet" href="../frontend/css/perso.css" />
+    <title>Espace Arène - Jeu en Ligne</title>
     <link rel="stylesheet" href="../frontend/css/ingame.css" />
   </head>
-
   <body>
     <img class="j1" src="../frontend/assets/man/000.png" />
     <img class="j2" src="../frontend/assets/man/000.png" />
     <img class="arena" src="../frontend/assets/arena/spaceship.png" />
-    // -- pillier --
+
     <img
       id="img-pilier1"
       src="../frontend/assets/piliers/pilier1.png"
@@ -38,7 +36,15 @@
       class="asset-cache"
     />
 
+    <img
+      id="img-box"
+      src="../frontend/assets/piliers/mur1.png"
+      class="asset-cache"
+    />
+
     <canvas id="monCanvas" width="1600" height="900"></canvas>
+
+    <script src="/socket.io/socket.io.js"></script>
     <script src="../frontend/script/arene.js"></script>
     <script src="../frontend/script/player.js"></script>
     <script src="../frontend/script/bot.js"></script>
