@@ -1,28 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arena - Battle Game</title>
-    <link rel="stylesheet" href="../frontend/css/menu.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spaceship - Battle</title>
+<link rel="stylesheet" href="../frontend/css/menu.css">
+<link rel="icon" type="image/png" href="../frontend/assets/icon.png">
 </head>
 
 <body>
-    <div class="menu-container">
-        <h1 class="title">ARENA</h1>
-        <div class="buttons-container">
-            <a href="/ingame" class="play-btn">1v1</a>
-            <a href="/ingame" class="play-btn">Bot</a>
-        </div>
-        <p class="subtitle">Prepare for Battle</p>
-    </div>
-    
-    <script src="../frontend/script/menu.js"></script>
-    <script src="../frontend/script/arene.js"></script>
-    <script src="../frontend/script/player.js"></script>
-    <script src="../frontend/script/bot.js"></script>
-    <script src="../frontend/script/main.js"></script>
-</body>
 
+    <img
+        class="background-img"
+        src="../frontend/assets/fondmenu.png"
+        alt="Fond">
+
+    <div class="overlay"></div>
+
+    <div class="sidebar"></div>
+
+    <div class="main-content">
+
+        <img
+            class="title-img"
+            src="../frontend/assets/title-removebg-preview.png"
+            alt="Titre">
+
+        <div class="menu-container">
+
+            <button class="menu-btn" style="--i:0;">
+                <span>Player VS Player</span>
+            </button>
+
+            <button class="menu-btn" style="--i:1;">
+                <span>Player VS Bot</span>
+            </button>
+
+            <button class="menu-btn" style="--i:2;">
+                <span>Crédits</span>
+            </button>
+
+            <button class="menu-btn" style="--i:3;">
+                <span>Quitter</span>
+            </button>
+
+        </div>
+
+    </div>
+
+</body>
 </html>
