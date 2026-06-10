@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spaceship - Battle</title>
+    <link rel="stylesheet" href="/frontend/css/menu.css">
+    <link rel="icon" type="image/png" href="/frontend/assets/icon.png">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/frontend/script/lobby.js" defer></script>
+</head>
+
+<body>
+
+    <div class="overlay"></div>
+    <div class="sidebar-lobby"></div>
+
+    <div class="main-content-lobby">
+        <img class="title-img" src="/frontend/assets/title.png" alt="Titre">
+
+        <div class="menu-container-lobby">
+            <button class="menu-btn" type="button" data-action="retour" id="btn-lobby-retour" style="--i:2;">
+                <span>Retour</span>
+            </button>
+
+            <button class="menu-btn" type="button" data-action="skin" id="btn-SkinMenu" style="--i:3;">
+                <span>Skins</span>
+            </button>
+
+            <button class="menu-btn" type="button" data-action="isReady" id="btn-Ready" style="--i:4;">
+                <span>EN ATTENTE</span>
+            </button>
+
+        </div>
+    </div>
+
+    <div id="lobby-zone">
+
+        <img class="lobby-bg-top" src="/frontend/assets/background/fondlobbyJoueur1.png" alt="Fond Top">
+        <img class="lobby-bg-bottom" src="/frontend/assets/background/fondlobbyJoueur2.png" alt="Fond Bas">
+        <div class="lobby-separator"></div>
+    </div>
+
+    <div id="overlay-countdown" class="hidden">
+        <div class="countdown-content">
+            <h1 id="countdown-text">Lancement dans 5</h1>
+        </div>
+    </div>
+    <script src="/frontend/script/lobby.js"></script>
+</body>
+
+</html>

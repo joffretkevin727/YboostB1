@@ -1,153 +1,227 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-body{
-    height:100vh;
-    overflow:hidden;
-    font-family:Arial, Helvetica, sans-serif;
-    display:flex;
-    align-items:flex-start;
-    justify-content:flex-start;
+body {
+    height: 100vh;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    background-color: #0f0f0f;
 }
 
-/* Fond */
-.background-img{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    object-fit:cover;
-    z-index:-3;
+/* --- FOND --- */
+.background-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -3;
 }
 
-/* Assombrit légèrement le fond */
-.overlay{
-    position:absolute;
-    inset:0;
-    background:rgba(0,0,0,0.30);
-    z-index:-2;
+.overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.30);
+    z-index: -2;
 }
 
-/* Sidebar */
-.sidebar{
-    position:absolute;
-    top:0;
-    left:-80px;
-    width:600px;
-    height:100%;
-
-    background:linear-gradient(
+/* --- SIDEBAR --- */
+.sidebar {
+    position: absolute;
+    top: 0;
+    left: -80px;
+    width: 660px;
+    height: 100%;
+    background: linear-gradient(
         180deg,
         #0f0f0f 0%,
         #1a1a1a 50%,
         #101010 100%
     );
-
-    transform:skewX(-13deg);
-    transform-origin:top left;
-
-    box-shadow:
-        15px 0 40px rgba(0,0,0,0.8);
-
-    z-index:-1;
+    transform: skewX(-13deg);
+    transform-origin: top left;
+    box-shadow: 15px 0 40px rgba(0, 0, 0, 0.8);
+    z-index: -1;
 }
 
-/* Contenu */
-.main-content{
-    position:relative;
-    display:flex;
-    flex-direction:column;
-    align-items:flex-start;
-
-    padding-left:100px;
-
-    width:500px;
-    height:100%;
+/* --- CONTENU SIDEBAR --- */
+.main-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-left: 100px;
+    width: 500px;
+    height: 100%;
 }
 
-/* Logo */
-.title-img{
-    max-width:85%;
-    height:auto;
-
-    margin-top:7vh;
-    margin-bottom:9vh;
-
-    align-self:center;
-    margin-right:90px;
+.title-img {
+    max-width: 85%;
+    height: auto;
+    margin-top: 5vh;
+    margin-bottom: 9vh;
+    align-self: center;
+    margin-right: 60px;
 }
 
-/* Container boutons */
-.menu-container{
-    display:flex;
-    flex-direction:column;
-    gap:20px;
-    width:100%;
+.menu-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    margin-left: 40px;
 }
 
-.menu-btn{
-    position:relative;
-
-    width:260px;
-    padding:16px 0;
-
-    background:rgba(255,255,255,0.03);
-
-    border:2px solid rgb(255, 255, 255);
-
-    color:white;
-
-    font-size:24px;
-    font-weight:700;
-    letter-spacing:2px;
-
-    cursor:pointer;
-    overflow:hidden;
-
-    transform:skewX(-13deg);
-
-    transition:
-        border-color .3s ease,
-        background-color .3s ease;
-
-    text-align:center;
-
-    margin-left:calc(var(--i) * -20px);
+.menu-btn {
+    position: relative;
+    width: 280px;
+    padding: 16px 0;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid rgb(255, 255, 255);
+    color: white;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    overflow: hidden;
+    transform: skewX(-13deg);
+    transition: border-color .3s ease, background-color .3s ease;
+    text-align: center;
+    margin-left: calc(var(--i) * -20px);
 }
 
-.menu-btn::after{
-    content:"";
-    position:absolute;
-
-    top:0;
-    left:0;
-
-    width:0;
-    height:100%;
-
-    background:#b7d8ff;
-
-    z-index:-1;
-
-    transition:width .3s ease;
+.menu-btn::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: #ffffff;
+    z-index: -1;
+    transition: width .3s ease;
 }
 
-/* Texte */
-.menu-btn span{
-    display:block;
-    transform:skewX(13deg);
-
-    text-shadow:
-        0 1px 3px rgba(0,0,0,0.5);
+.menu-btn span {
+    display: block;
+    transform: skewX(13deg);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-.menu-btn:hover::after{
-    width:100%;
+.menu-btn:hover::after {
+    width: 100%;
 }
 
-.menu-btn:hover{
-    border-color:rgba(255,255,255,0.25);
+.menu-btn:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #000;
+}
+/* --- CONFIGURATION  LOBBY  --- */
+
+.hidden { /* cacher le decompte*/
+    display: none !important;
+}
+
+.sidebar-lobby {
+    position: absolute;
+    top: 0;
+    left: -80px;
+    width: 660px;
+    height: 100%;
+    background: linear-gradient(
+        180deg,
+        #0f0f0f 0%,
+        #1a1a1a 50%,
+        #101010 100%
+    );
+    transform: skewX(-13deg);
+    transform-origin: top left;
+    box-shadow: 15px 0 40px rgba(0, 0, 0, 0.8);
+    z-index: 2;
+}
+
+.main-content-lobby {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-left: 100px;
+    width: 500px;
+    height: 100%;
+    z-index: 3; 
+}
+
+.menu-container-lobby {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    margin-left: 40px;
+    margin-top: 12.8vh; 
+}
+
+/* --- ZONE DU LOBBY --- */
+#lobby-zone {
+    position: absolute;
+    top: 0;
+    left: 0;         
+    width: 100vw;    
+    height: 100vh;
+    z-index: 1; 
+    overflow: hidden;
+}
+
+/* --- L'IMAGE DU BAS RESTE ENTIÈRE --- */
+.lobby-bg-bottom {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    image-rendering: pixelated;
+    z-index: -2;
+}
+
+.lobby-bg-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    image-rendering: pixelated;
+    z-index: -1;
+    clip-path: polygon(0 0, 107% 0, 0 105%, 0 100%);
+}
+
+/* --- LIGNE DE SÉPARATION ALIGNÉE --- */
+.lobby-separator {
+    position: absolute;
+    top: 0;
+    left: 55.75%; /* Ajusté chirurgicalement pour couvrir la jointure des deux clips */
+    width: 12px;
+    height: 100%;
+    background-color: white;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    transform: skewX(-62.8deg);
+    z-index: 5; 
+}
+
+
+/* --- OVERLAY DECOMPTE --- */
+#overlay-countdown {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

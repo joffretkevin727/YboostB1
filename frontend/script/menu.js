@@ -6,7 +6,10 @@ menuButtons.forEach((button) => {
 
     switch (action) {
       case "pvp":
-        window.location.href = "../frontend/ingame.html";
+        window.location.href = "../frontend/lobby.html";
+        break;
+        case "2pv2p":
+        window.location.href = "../frontend/lobby.html";
         break;
       case "bot":
         window.location.href = "../frontend/ingame.html";
