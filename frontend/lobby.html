@@ -1,67 +1,254 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spaceship - Battle</title>
-    <link rel="stylesheet" href="/frontend/css/menu.css">
-    <link rel="icon" type="image/png" href="/frontend/assets/icon.png">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spaceship - Lobby</title>
+    <link rel="stylesheet" href="/frontend/css/menu.css" />
+    <link rel="icon" type="image/png" href="/frontend/assets/icon.png" />
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/frontend/script/lobby.js" defer></script>
-</head>
+    <style>
+      /* Conteneur global d'un emplacement */
+      .lobby-slot {
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        transform: translate(-50%, -50%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+        transition: all 0.3s ease;
+      }
 
-<body>
+      /* --- POSITIONS DIAGONALES EXACTES --- */
+      .pos-A1 {
+        top: 40%;
+        left: 45%;
+      } /* Milieu en bas à gauche */
+      .pos-A2 {
+        top: 20%;
+        left: 65%;
+      } /* Encore plus bas à gauche */
 
+      .pos-B1 {
+        top: 60%;
+        left: 80%;
+      } /* Milieu à droite */
+      .pos-B2 {
+        top: 80%;
+        left: 60%;
+      } /* En bas à droite */
+
+      /* Bouton + façon Brawl Stars */
+      .empty-btn {
+        width: 65px;
+        height: 65px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.7);
+        border: 3px dashed rgba(255, 255, 255, 0.6);
+        color: white;
+        font-size: 35px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: 0.2s;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      }
+      .empty-btn:hover {
+        border-color: white;
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.1);
+      }
+
+      /* Conteneur du joueur actif */
+      .player-content {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+      }
+
+      .img-skin {
+        width: 100px;
+        height: 100px;
+        object-fit: contain;
+        z-index: 2;
+        filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.8));
+      }
+
+      /* Lignes sous les pieds */
+      .shadow-base {
+        position: absolute;
+        bottom: 10px;
+        width: 70px;
+        height: 5px;
+        border-radius: 50%;
+        z-index: 1;
+      }
+      .shadow-A {
+        background: #ff4c4c;
+        box-shadow: 0 0 15px #ff4c4c;
+      }
+      .shadow-B {
+        background: #3498db;
+        box-shadow: 0 0 15px #3498db;
+      }
+
+      /* Flèches pour changer de skin */
+      .arrow-btn {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.8);
+        border: 2px solid white;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        transition: 0.2s;
+      }
+      .arrow-btn:hover {
+        background: white;
+        color: black;
+        transform: scale(1.1);
+      }
+      .prev-arrow {
+        left: -10px;
+      }
+      .next-arrow {
+        right: -10px;
+      }
+    </style>
+  </head>
+
+  <body>
     <div class="overlay"></div>
     <div class="sidebar-lobby"></div>
 
     <div class="main-content-lobby">
-        <img class="title-img" src="/frontend/assets/title.png" alt="Titre">
+      <img class="title-img" src="/frontend/assets/title.png" alt="Titre" />
 
-        <div class="menu-container-lobby">
-            <button class="menu-btn" type="button" data-action="retour" id="btn-lobby-retour" style="--i:2;">
-                <span>Retour</span>
-            </button>
-
-            <button class="menu-btn" type="button" data-action="skin" id="btn-SkinMenu" style="--i:3;">
-                <span>Skins</span>
-            </button>
-
-            <button class="menu-btn" type="button" data-action="isReady" id="btn-Ready" style="--i:4;">
-                <span>EN ATTENTE</span>
-            </button>
-
-        </div>
+      <div class="menu-container-lobby">
+        <button
+          class="menu-btn"
+          type="button"
+          data-action="retour"
+          id="btn-lobby-retour"
+          style="--i: 2"
+        >
+          <span>Retour</span>
+        </button>
+        <button
+          class="menu-btn"
+          type="button"
+          data-action="skin"
+          id="btn-SkinMenu"
+          style="--i: 3"
+        >
+          <span>Skins</span>
+        </button>
+        <button
+          class="menu-btn"
+          type="button"
+          data-action="isReady"
+          id="btn-Ready"
+          style="--i: 4"
+        >
+          <span>PRÊT</span>
+        </button>
+      </div>
     </div>
 
     <div id="lobby-zone">
+      <img
+        class="lobby-bg-top"
+        src="/frontend/assets/background/fondlobbyJoueur1.png"
+        alt="Fond"
+      />
+      <img
+        class="lobby-bg-bottom"
+        src="/frontend/assets/background/fondlobbyJoueur2.png"
+        alt="Fond"
+      />
+      <div class="lobby-separator"></div>
+    </div>
 
-        <img class="lobby-bg-top" src="/frontend/assets/background/fondlobbyJoueur1.png" alt="Fond Top">
-        <img class="lobby-bg-bottom" src="/frontend/assets/background/fondlobbyJoueur2.png" alt="Fond Bas">
-        <div class="lobby-separator"></div>
-    </div>
-    <div id="skin-container-p1" class="skin-selector-box">
-        <button type="button" class="arrow-btn arrow-hidden" id="prev-skin-p1">◀</button>
-        <div class="skin-display">
-            <img class="img-skin" id="img-preview-p1" src="/frontend/assets/man/skin1/000.png" alt="Skin P1">
-        </div>
-        <button type="button" class="arrow-btn arrow-hidden" id="next-skin-p1">▶</button>
+    <!-- EMPLACEMENTS (Team A à gauche, Team B à droite) -->
+    <div id="slot-A1" class="lobby-slot pos-A1 hidden">
+      <button class="empty-btn" id="btn-add-A1">+</button>
+      <div class="player-content hidden" id="content-A1">
+        <button class="arrow-btn prev-arrow hidden" id="prev-skin-A1">◀</button>
+        <img
+          class="img-skin"
+          id="img-A1"
+          src="/frontend/assets/man/skin1/000.png"
+          alt="Skin"
+        />
+        <button class="arrow-btn next-arrow hidden" id="next-skin-A1">▶</button>
+        <div class="shadow-base shadow-A"></div>
+      </div>
     </div>
 
-    <div id="skin-container-p2" class="skin-selector-box hidden">
-        <button type="button" class="arrow-btn arrow-hidden" id="prev-skin-p2">◀</button>
-        <div class="skin-display">
-            <img class="img-skin" id="img-preview-p2" src="/frontend/assets/man/skin1/000.png" alt="Skin P2">
-        </div>
-        <button type="button" class="arrow-btn arrow-hidden" id="next-skin-p2">▶</button>
+    <div id="slot-A2" class="lobby-slot pos-A2 hidden">
+      <button class="empty-btn" id="btn-add-A2">+</button>
+      <div class="player-content hidden" id="content-A2">
+        <button class="arrow-btn prev-arrow hidden" id="prev-skin-A2">◀</button>
+        <img
+          class="img-skin"
+          id="img-A2"
+          src="/frontend/assets/man/skin1/000.png"
+          alt="Skin"
+        />
+        <button class="arrow-btn next-arrow hidden" id="next-skin-A2">▶</button>
+        <div class="shadow-base shadow-A"></div>
+      </div>
     </div>
+
+    <div id="slot-B1" class="lobby-slot pos-B1 hidden">
+      <button class="empty-btn" id="btn-add-B1">+</button>
+      <div class="player-content hidden" id="content-B1">
+        <button class="arrow-btn prev-arrow hidden" id="prev-skin-B1">◀</button>
+        <img
+          class="img-skin"
+          id="img-B1"
+          src="/frontend/assets/man/skin1/000.png"
+          alt="Skin"
+        />
+        <button class="arrow-btn next-arrow hidden" id="next-skin-B1">▶</button>
+        <div class="shadow-base shadow-B"></div>
+      </div>
+    </div>
+
+    <div id="slot-B2" class="lobby-slot pos-B2 hidden">
+      <button class="empty-btn" id="btn-add-B2">+</button>
+      <div class="player-content hidden" id="content-B2">
+        <button class="arrow-btn prev-arrow hidden" id="prev-skin-B2">◀</button>
+        <img
+          class="img-skin"
+          id="img-B2"
+          src="/frontend/assets/man/skin1/000.png"
+          alt="Skin"
+        />
+        <button class="arrow-btn next-arrow hidden" id="next-skin-B2">▶</button>
+        <div class="shadow-base shadow-B"></div>
+      </div>
+    </div>
+
     <div id="overlay-countdown" class="hidden">
-        <div class="countdown-content">
-            <h1 id="countdown-text">Lancement dans 5</h1>
-        </div>
+      <div class="countdown-content">
+        <h1 id="countdown-text">Lancement dans 3</h1>
+      </div>
     </div>
-    <script src="/frontend/script/lobby.js"></script>
-</body>
 
+    <script src="/frontend/script/lobby.js"></script>
+  </body>
 </html>

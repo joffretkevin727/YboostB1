@@ -1,177 +1,146 @@
 const socket = io();
+const modeJeu = localStorage.getItem("modeJeu") || "1vs1";
 
-let monSlotJoueur = null; // Sera défini à 'p1' ou 'p2' par le serveur
-let indexSkinActuel = 1; 
+let monSlotJoueur = null;
+let monEquipe = null;
+let indexSkinActuel = 1;
 let localPret = false;
-let selecteurSkinVisible = false;
+const TOUS_LES_SLOTS = ["A1", "A2", "B1", "B2"];
 
-const menuButtons = document.querySelectorAll(".menu-btn");
+window.addEventListener("DOMContentLoaded", () => {
+  const btnReady = document.getElementById("btn-Ready");
+  if (btnReady) btnReady.querySelector("span").innerText = "PRÊT";
 
-menuButtons.forEach((button) => {
+  // On masque les slots 2 en 1v1 ou contre Bot
+  if (modeJeu !== "2vs2") {
+    document.getElementById("slot-A2").style.display = "none";
+    document.getElementById("slot-B2").style.display = "none";
+  }
+
+  // Association des événements sur les boutons "+" et les flèches
+  TOUS_LES_SLOTS.forEach((slot) => {
+    document
+      .getElementById(`btn-add-${slot}`)
+      ?.addEventListener("click", () => {
+        socket.emit("changer_slot", slot); // Demande au serveur de bouger à cette place
+      });
+    document
+      .getElementById(`prev-skin-${slot}`)
+      ?.addEventListener("click", () => majMonSkin(-1));
+    document
+      .getElementById(`next-skin-${slot}`)
+      ?.addEventListener("click", () => majMonSkin(1));
+  });
+
+  socket.emit("demander_slot_lobby", modeJeu);
+});
+
+document.querySelectorAll(".menu-btn").forEach((button) => {
   button.addEventListener("click", () => {
     const action = button.dataset.action;
 
-    switch (action) {
-      case "retour":
-        window.location.href = "../frontend/menu.html";
-        break;
-
-      case "skin":
-        if (!monSlotJoueur) return; // Attente de l'attribution du slot
-        
-        selecteurSkinVisible = !selecteurSkinVisible;
-        const btnPrev = document.getElementById(`prev-skin-${monSlotJoueur}`);
-        const btnNext = document.getElementById(`next-skin-${monSlotJoueur}`);
-
-        if (btnPrev && btnNext) {
-            if (selecteurSkinVisible) {
-                btnPrev.classList.remove("arrow-hidden");
-                btnNext.classList.remove("arrow-hidden");
-            } else {
-                btnPrev.classList.add("arrow-hidden");
-                btnNext.classList.add("arrow-hidden");
-            }
-        }
-        break;
-
-      case "isReady":
-        localPret = !localPret;
-        const span = button.querySelector('span');
-        
-        if (localPret) {
-            span.innerText = "PRÊT";
-            button.style.borderColor = "#2ecc71";
-        } else {
-            span.innerText = "EN ATTENTE";
-            button.style.borderColor = "rgb(255, 255, 255)";
-        }
-        
-        socket.emit("joueur_statut_pret", { 
-            pret: localPret, 
-            pseudo: getPseudo(), 
-            skin: `skin${indexSkinActuel}` 
-        });
-        break;     
-
-      default:
-        console.warn("Action de menu inconnue :", action);
+    if (action === "retour") window.location.href = "/menu";
+    else if (action === "skin") {
+      if (!monSlotJoueur) return;
+      const btnPrev = document.getElementById(`prev-skin-${monSlotJoueur}`);
+      const btnNext = document.getElementById(`next-skin-${monSlotJoueur}`);
+      if (btnPrev) btnPrev.classList.toggle("hidden");
+      if (btnNext) btnNext.classList.toggle("hidden");
+    } else if (action === "isReady") {
+      localPret = !localPret;
+      const span = button.querySelector("span");
+      span.innerText = localPret ? "EN ATTENTE" : "PRÊT";
+      button.style.borderColor = localPret ? "#2ecc71" : "white";
+      remonterInfosLobby();
     }
   });
 });
 
-window.addEventListener("DOMContentLoaded", () => {
-    // Écouteurs sur les flèches des deux divs
-    document.getElementById("prev-skin-p1").addEventListener("click", () => majMonSkin(-1));
-    document.getElementById("next-skin-p1").addEventListener("click", () => majMonSkin(1));
-    document.getElementById("prev-skin-p2").addEventListener("click", () => majMonSkin(-1));
-    document.getElementById("next-skin-p2").addEventListener("click", () => majMonSkin(1));
-    
-    // On demande explicitement notre rôle au serveur dès que le HTML est prêt
-    socket.emit("demander_slot");
-});
-
-// Événement crucial : Le serveur te répond "p1" ou "p2" directement
-socket.on("reponse_slot", (slotAssigne) => {
-    monSlotJoueur = slotAssigne; 
-    remonterInfosLobby(); // Envoie le skin initial une fois le slot connu
-});
-
 function majMonSkin(direction) {
-    indexSkinActuel += direction;
-    if (indexSkinActuel < 1) indexSkinActuel = 4;
-    if (indexSkinActuel > 4) indexSkinActuel = 1;
-
-    // Met à jour l'image locale instantanément
-    const maPhoto = document.getElementById(`img-preview-${monSlotJoueur}`);
-    if (maPhoto) maPhoto.src = `/frontend/assets/man/skin${indexSkinActuel}/000.png`;
-
-    remonterInfosLobby();
-}
-
-function getPseudo() {
-    const input = document.getElementById("pseudo-local");
-    return input ? input.value.trim() : "Joueur 1";
+  indexSkinActuel += direction;
+  if (indexSkinActuel < 1) indexSkinActuel = 4;
+  if (indexSkinActuel > 4) indexSkinActuel = 1;
+  remonterInfosLobby();
 }
 
 function remonterInfosLobby() {
-    if (!monSlotJoueur) return;
-    socket.emit("update_lobby_info", { 
-        slot: monSlotJoueur, // On ajoute le slot pour aider le serveur
-        skin: `skin${indexSkinActuel}`, 
-        pseudo: getPseudo() 
-    });
+  if (!monSlotJoueur) return;
+  socket.emit("update_lobby_info", {
+    skin: `skin${indexSkinActuel}`,
+    pret: localPret,
+  });
 }
 
-socket.on("mise_a_jour_lobby", (reponseServeur) => {
+socket.on("mise_a_jour_lobby", (reponse) => {
+  const joueurs = Object.values(reponse);
+  const prets = joueurs.filter((j) => j.pret).length;
+  let totalRequis = modeJeu === "2vs2" ? 4 : modeJeu === "bot" ? 1 : 2;
 
-    const joueurP2Existe = Object.values(reponseServeur).some(
-        joueur => joueur.slot === "p2"
-    );
+  // Identifier mes propres données actualisées par le serveur
+  const moi = joueurs.find((j) => j.id === socket.id);
+  if (moi) {
+    monSlotJoueur = moi.slot;
+    monEquipe = moi.equipe;
 
-    const containerP2 = document.getElementById("skin-container-p2");
-
-    if (containerP2) {
-        if (joueurP2Existe) {
-            containerP2.classList.remove("hidden");
-        } else {
-            containerP2.classList.add("hidden");
-        }
+    // Si le serveur a annulé mon état prêt (car j'ai changé de slot)
+    if (!moi.pret && localPret) {
+      localPret = false;
+      document.querySelector("#btn-Ready span").innerText = "PRÊT";
+      document.getElementById("btn-Ready").style.borderColor = "white";
     }
+  }
 
-    const listeIds = Object.keys(reponseServeur);
+  const btnReady = document.getElementById("btn-Ready");
+  if (btnReady && localPret) {
+    btnReady.querySelector("span").innerText =
+      `EN ATTENTE (${prets}/${totalRequis})`;
+  }
 
-    listeIds.forEach((id) => {
+  // Réinitialisation de tout l'affichage
+  TOUS_LES_SLOTS.forEach((slot) => {
+    const divGlobal = document.getElementById(`slot-${slot}`);
+    if (!divGlobal) return;
 
-        const donnéesJoueur = reponseServeur[id];
-        const slotId = donnéesJoueur.slot;
+    divGlobal.classList.remove("hidden");
+    document.getElementById(`btn-add-${slot}`).classList.remove("hidden"); // Affiche le '+'
+    document.getElementById(`content-${slot}`).classList.add("hidden"); // Cache le skin
+    document.getElementById(`prev-skin-${slot}`).classList.add("hidden");
+    document.getElementById(`next-skin-${slot}`).classList.add("hidden");
+  });
 
-        if (!slotId) return;
+  // Affichage des joueurs connectés
+  joueurs.forEach((j) => {
+    document.getElementById(`btn-add-${j.slot}`).classList.add("hidden"); // Cache le '+'
+    document.getElementById(`content-${j.slot}`).classList.remove("hidden"); // Affiche le joueur
+    document.getElementById(`img-${j.slot}`).src =
+      `/frontend/assets/man/${j.skin}/000.png`;
 
-        const imgPreview = document.getElementById(`img-preview-${slotId}`);
-
-        if (imgPreview) {
-            imgPreview.src = `/frontend/assets/man/${donnéesJoueur.skin || "skin1"}/000.png`;
-        }
-
-        if (id !== socket.id) {
-
-            const pseudoDistant = document.getElementById("pseudo-distant");
-
-            if (pseudoDistant) {
-                pseudoDistant.innerText = donnéesJoueur.pseudo || "Adversaire";
-            }
-
-            const statutP2 = document.getElementById("statut-p2");
-
-            if (statutP2) {
-                statutP2.innerText = donnéesJoueur.pret ? "Prêt" : "Pas prêt";
-                statutP2.style.color = donnéesJoueur.pret
-                    ? "#2ecc71"
-                    : "#ff3333";
-            }
-        }
-    });
+    // Si c'est mon perso, je garde les flèches visibles si je ne suis pas prêt
+    if (j.id === socket.id && !localPret) {
+      document.getElementById(`prev-skin-${j.slot}`).classList.remove("hidden");
+      document.getElementById(`next-skin-${j.slot}`).classList.remove("hidden");
+    }
+  });
 });
 
-socket.on("declencher_decompte", () => {
-    const overlayCountdown = document.getElementById("overlay-countdown");
-    const countdownText = document.getElementById("countdown-text");
-    
-    if (overlayCountdown) overlayCountdown.classList.remove("hidden");
+socket.on("lancement_partie_lobby", () => {
+  const overlayCountdown = document.getElementById("overlay-countdown");
+  const countdownText = document.getElementById("countdown-text");
+  if (overlayCountdown) overlayCountdown.classList.remove("hidden");
 
-    let tempsRestant = 3; // MODIFIÉ : Passage à 3 secondes
-    if (countdownText) countdownText.innerText = `Lancement dans ${tempsRestant}`;
+  let tempsRestant = 3;
+  if (countdownText) countdownText.innerText = `Lancement dans ${tempsRestant}`;
 
-    const interval = setInterval(() => {
-        tempsRestant--;
-        if (tempsRestant > 0) {
-            if (countdownText) countdownText.innerText = `Lancement dans ${tempsRestant}`;
-        } else {
-            clearInterval(interval);
-            if (countdownText) countdownText.innerText = "C'est parti !";
-            
-            // Redirection immédiate vers l'arène de jeu après les 3 secondes
-            window.location.href = "/frontend/ingame.html";
-        }
-    }, 1000);
+  const interval = setInterval(() => {
+    tempsRestant--;
+    if (tempsRestant > 0) {
+      if (countdownText)
+        countdownText.innerText = `Lancement dans ${tempsRestant}`;
+    } else {
+      clearInterval(interval);
+      localStorage.setItem("monSkin", `skin${indexSkinActuel}`);
+      localStorage.setItem("monEquipe", monEquipe);
+      window.location.href = "/ingame";
+    }
+  }, 1000);
 });

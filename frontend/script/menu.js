@@ -6,28 +6,24 @@ menuButtons.forEach((button) => {
 
     switch (action) {
       case "pvp":
-        window.location.href = "../frontend/lobby.html";
+        localStorage.setItem("modeJeu", "1vs1");
+        window.location.href = "/lobby";
         break;
-        case "2pv2p":
-        window.location.href = "../frontend/lobby.html";
+      case "2pv2p":
+        localStorage.setItem("modeJeu", "2vs2");
+        window.location.href = "/lobby";
         break;
       case "bot":
-        window.location.href = "../frontend/ingame.html";
+        localStorage.setItem("modeJeu", "bot");
+        window.location.href = "/lobby";
         break;
       case "credits":
-        window.location.href = "../frontend/credits.html";
+        window.location.href = "/frontend/credits.html";
         break;
       case "quit":
-        alert(
-          "Pour quitter : arrête le serveur Node (server.js), puis ferme cette page.",
-        );
+        alert("Pour quitter : arrête le serveur Node.");
         window.open("", "_self").close();
-        setTimeout(() => {
-          window.location.href = "about:blank";
-        }, 100);
         break;
-      default:
-        console.warn("Action de menu inconnue :", action);
     }
   });
 });

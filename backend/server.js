@@ -9,12 +9,13 @@ const io = new Server(server);
 
 app.use("/frontend", express.static(path.join(__dirname, "..", "frontend")));
 
-let joueursConnectes = {};
+let lobbyJoueurs = {};
+let joueursEnJeu = {};
 let boitesDynamiques = [];
 
 const MAP_W = 1600;
 const MAP_H = 900;
-const REBORD = 25;
+const ORDRE_SLOTS = ["A1", "B1", "A2", "B2"]; // Ordre de remplissage naturel
 
 app.get("/menu", (req, res) =>
   res.sendFile(path.join(__dirname, "..", "frontend", "menu.html")),
@@ -22,130 +23,163 @@ app.get("/menu", (req, res) =>
 app.get("/ingame", (req, res) =>
   res.sendFile(path.join(__dirname, "..", "frontend", "ingame.html")),
 );
+app.get("/lobby", (req, res) =>
+  res.sendFile(path.join(__dirname, "..", "frontend", "lobby.html")),
+);
+
+// 🔄 FONCTION MAGIQUE : Décaler A2 sur A1 ou B2 sur B1 s'il y a un trou
+function verifierDecalageBrawlStars() {
+  ["A", "B"].forEach((equipe) => {
+    const joueur1 = Object.values(lobbyJoueurs).find(
+      (j) => j.slot === equipe + "1",
+    );
+    const joueur2 = Object.values(lobbyJoueurs).find(
+      (j) => j.slot === equipe + "2",
+    );
+
+    // Si la place 1 est vide mais que la place 2 est prise, le joueur avance d'une case !
+    if (!joueur1 && joueur2) {
+      joueur2.slot = equipe + "1";
+    }
+  });
+}
 
 io.on("connection", (socket) => {
-  if (Object.keys(joueursConnectes).length >= 2) {
-    socket.emit("serveur_plein");
-    socket.disconnect();
-    return;
-  }
-
-  console.log(`🟢 Joueur connecté : ${socket.id}`);
+  console.log(`🟢 Connecté : ${socket.id}`);
 
   // ==========================================
-  // NOUVEAU : LOGIQUE D'ATTRIBUTION DES SLOTS LOBBY
+  // LOBBY BRAWL STARS - CONNEXION
   // ==========================================
-  socket.on("demander_slot", () => {
-    // Détermine le slot libre (p1 ou p2)
-    const rolesActuels = Object.values(joueursConnectes).map((j) => j.slot);
-    const slot = rolesActuels.includes("p1") ? "p2" : "p1";
-    const roleGame = slot === "p1" ? "j1" : "j2";
+  socket.on("demander_slot_lobby", (modeJeu) => {
+    // Cherche le premier slot libre dans l'ordre (A1, puis B1, puis A2, puis B2)
+    const slotsPris = Object.values(lobbyJoueurs).map((j) => j.slot);
+    const slotChoisi = ORDRE_SLOTS.find((s) => !slotsPris.includes(s));
 
-    // Initialisation complète requise par le lobby et le ingame
-    joueursConnectes[socket.id] = {
+    if (!slotChoisi) return; // Full
+
+    lobbyJoueurs[socket.id] = {
       id: socket.id,
-      slot: slot, // Pour le lobby
-      role: roleGame, // Pour le ingame
-      x: roleGame === "j1" ? 150 : MAP_W - 200,
-      y: roleGame === "j1" ? 150 : MAP_H - 200,
-      direction: roleGame === "j1" ? "droite" : "gauche",
-      health: 100,
-      mursPoses: 0,
+      slot: slotChoisi,
+      equipe: slotChoisi.startsWith("A") ? "A" : "B",
+      pret: false,
       skin: "skin1",
-      pseudo: slot === "p1" ? "Joueur 1" : "Joueur 2",
-      pret: false, // Suivi du lobby
-      ready: false, // Suivi du ingame
+      mode: modeJeu,
     };
 
-    socket.emit("reponse_slot", slot);
-    io.emit("mise_a_jour_lobby", joueursConnectes);
+    io.emit("mise_a_jour_lobby", lobbyJoueurs);
   });
 
-  // NOUVEAU : Synchronisation en temps réel des changements de skin et pseudo
-  socket.on("update_lobby_info", (data) => {
-    const j = joueursConnectes[socket.id];
-    if (!j) return;
-    j.skin = data.skin;
-    j.pseudo = data.pseudo;
-    io.emit("mise_a_jour_lobby", joueursConnectes);
-  });
-
-  // NOUVEAU : Gestion des états de préparation et lancement du décompte du lobby
-  socket.on("joueur_statut_pret", (data) => {
-    const j = joueursConnectes[socket.id];
+  // ==========================================
+  // CLIC SUR UN "+" POUR CHANGER DE PLACE
+  // ==========================================
+  socket.on("changer_slot", (targetSlot) => {
+    const j = lobbyJoueurs[socket.id];
     if (!j) return;
 
-    j.pret = data.pret;
-    j.ready = data.pret; // Aligne l'état du moteur de jeu
-    j.pseudo = data.pseudo;
-    j.skin = data.skin;
+    const slotsPris = Object.values(lobbyJoueurs).map((p) => p.slot);
 
-    io.emit("mise_a_jour_lobby", joueursConnectes);
+    // Si la place cliquée est bien libre
+    if (!slotsPris.includes(targetSlot)) {
+      j.slot = targetSlot;
+      j.equipe = targetSlot.startsWith("A") ? "A" : "B";
+      j.pret = false; // On décoche Prêt par sécurité
 
-    const tousLesJoueurs = Object.values(joueursConnectes);
-    if (tousLesJoueurs.length === 2 && tousLesJoueurs.every((p) => p.ready)) {
-      console.log("⚔️ Partie lancée !");
-      io.emit("lancement_partie", joueursConnectes);
-    } else {
-      io.emit("attente_file", { connectes: tousLesJoueurs.length });
+      verifierDecalageBrawlStars(); // Vérifie s'il y a laissé un trou derrière lui
+      io.emit("mise_a_jour_lobby", lobbyJoueurs);
     }
   });
 
   // ==========================================
-  // LOGIQUE DE SÉCURITÉ ET D'INSTANCES DE JEU INTACTES
+  // MISE À JOUR (Skin, Prêt)
   // ==========================================
-  socket.emit("init_base", { role: "j1", boites: boitesDynamiques }); // Compatibilité avec ton canvas init_base
+  socket.on("update_lobby_info", (data) => {
+    if (lobbyJoueurs[socket.id]) {
+      lobbyJoueurs[socket.id].pret = data.pret;
+      lobbyJoueurs[socket.id].skin = data.skin;
+    }
+    io.emit("mise_a_jour_lobby", lobbyJoueurs);
 
-  // --- MODE SOLO VS BOT ---
-  socket.on("choix_skin_bot", (data) => {
-    const j = joueursConnectes[socket.id];
-    if (!j) return;
-    j.skin = data.skin;
-    j.ready = true;
+    const tous = Object.values(lobbyJoueurs);
+    if (tous.length === 0) return;
 
-    const botId = "BOT_" + socket.id;
-    joueursConnectes[botId] = {
-      id: botId,
-      role: "j2",
-      x: MAP_W - 200,
-      y: MAP_H - 200,
-      direction: "gauche",
-      health: 100,
-      mursPoses: 0,
-      skin: "skin4",
-      ready: true,
-      isBot: true,
-      enMouvement: false,
-    };
+    const mode = tous[0].mode;
+    const tousPrets = tous.every((j) => j.pret);
 
-    socket.emit("lancement_partie", {
-      [socket.id]: joueursConnectes[socket.id],
-      [botId]: joueursConnectes[botId],
-    });
+    // Lancement de la game
+    if (
+      (mode === "1vs1" && tous.length === 2 && tousPrets) ||
+      (mode === "bot" && tous.length === 1 && tousPrets) ||
+      (mode === "2vs2" && tous.length === 4 && tousPrets)
+    ) {
+      io.emit("lancement_partie_lobby");
+      lobbyJoueurs = {};
+    }
   });
 
-  // --- ACTIONS EN JEU ---
-  socket.on("action_deplacement", (data) => {
-    const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0 || !j.ready) return;
+  // ==========================================
+  // ARÈNE (JEU EN COURS) - AUCUN CHANGEMENT
+  // ==========================================
+  socket.on("rejoindre_arene", (data) => {
+    const nbInTeam = Object.values(joueursEnJeu).filter(
+      (j) => j.equipe === data.equipe,
+    ).length;
+    let startX, startY, startDir;
 
-    if (
-      data.x >= REBORD &&
-      data.x <= MAP_W - 64 - REBORD &&
-      data.y >= REBORD &&
-      data.y <= MAP_H - 64 - REBORD
-    ) {
+    if (data.equipe === "A") {
+      startX = 150 + nbInTeam * 100;
+      startY = 150 + nbInTeam * 100;
+      startDir = "droite";
+    } else {
+      startX = MAP_W - 200 - nbInTeam * 100;
+      startY = MAP_H - 200 - nbInTeam * 100;
+      startDir = "gauche";
+    }
+
+    joueursEnJeu[socket.id] = {
+      id: socket.id,
+      role: data.equipe === "A" ? "j1" : "j2",
+      equipe: data.equipe,
+      x: startX,
+      y: startY,
+      direction: startDir,
+      health: 100,
+      mursPoses: 0,
+      skin: data.skin,
+      ready: true,
+    };
+
+    if (data.mode === "bot") {
+      const botId = "BOT_" + socket.id;
+      joueursEnJeu[botId] = {
+        id: botId,
+        role: "j2",
+        equipe: "B",
+        x: MAP_W - 200,
+        y: MAP_H - 200,
+        direction: "gauche",
+        health: 100,
+        mursPoses: 0,
+        skin: "skin4",
+        ready: true,
+        isBot: true,
+      };
+    }
+
+    io.emit("mise_a_jour_initiale_arene", joueursEnJeu);
+  });
+
+  socket.on("action_deplacement", (data) => {
+    const j = joueursEnJeu[socket.id];
+    if (j && j.health > 0) {
       j.x = data.x;
       j.y = data.y;
       j.direction = data.direction;
       j.enMouvement = data.enMouvement;
-      socket.broadcast.emit("mise_a_jour_joueurs", joueursConnectes);
+      socket.broadcast.emit("mise_a_jour_joueurs", joueursEnJeu);
     }
   });
 
   socket.on("action_tir", (data) => {
-    const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0) return;
     socket.broadcast.emit("remote_tir", {
       ownerId: socket.id,
       x: data.x,
@@ -155,57 +189,48 @@ io.on("connection", (socket) => {
   });
 
   socket.on("infliger_degat", (data) => {
-    const cible = joueursConnectes[data.cibleId];
-    const tireur = joueursConnectes[socket.id];
+    const cible = joueursEnJeu[data.cibleId];
+    const tireur = joueursEnJeu[socket.id] || joueursEnJeu[data.tireurId];
 
-    if (cible && cible.health > 0) {
+    if (cible && tireur && cible.health > 0) {
+      if (cible.equipe === tireur.equipe) return; // Friendly Fire DÉSACTIVÉ
+
       cible.health = Math.max(0, cible.health - data.montant);
-
       if (cible.health <= 0) {
-        console.log(`💀 Fin de partie : ${tireur.id} a éliminé ${cible.id} !`);
         io.emit("fin_de_partie", {
-          vainqueurId: vainqueurId,
+          vainqueurId: data.tireurId,
           perdantId: cible.id,
         });
-
         boitesDynamiques = [];
-        for (let id in joueursConnectes) {
-          joueursConnectes[id].pret = false;
-          joueursConnectes[id].ready = false;
-          joueursConnectes[id].health = 100;
-          joueursConnectes[id].mursPoses = 0;
-        }
+        joueursEnJeu = {};
       } else {
-        io.emit("mise_a_jour_joueurs", joueursConnectes);
+        io.emit("mise_a_jour_joueurs", joueursEnJeu);
       }
     }
   });
 
   socket.on("poser_boite", (data) => {
-    const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0 || j.mursPoses >= 5) return;
-
-    const tropProche = boitesDynamiques.some(
-      (b) => Math.hypot(b.x - data.x, b.y - data.y) < 30,
-    );
-    if (!tropProche) {
-      const nouvelleBoite = { x: data.x, y: data.y, w: 40, h: 40 };
-      boitesDynamiques.push(nouvelleBoite);
+    const j = joueursEnJeu[socket.id];
+    if (j && j.mursPoses < 5) {
+      boitesDynamiques.push({ x: data.x, y: data.y, w: 40, h: 40 });
       j.mursPoses++;
-      io.emit("nouvelle_boite_ajoutee", nouvelleBoite);
+      io.emit("nouvelle_boite_ajoutee", { x: data.x, y: data.y, w: 40, h: 40 });
     }
   });
 
   socket.on("disconnect", () => {
-    console.log(`🔴 Joueur déconnecté : ${socket.id}`);
-    delete joueursConnectes[socket.id];
-    delete joueursConnectes["BOT_" + socket.id];
-    if (Object.keys(joueursConnectes).length === 0) boitesDynamiques = [];
-    io.emit("mise_a_jour_lobby", joueursConnectes);
-    io.emit("mise_a_jour_joueurs", joueursConnectes);
+    if (lobbyJoueurs[socket.id]) {
+      delete lobbyJoueurs[socket.id];
+      verifierDecalageBrawlStars(); // Le fameux glissement !
+      io.emit("mise_a_jour_lobby", lobbyJoueurs);
+    }
+
+    delete joueursEnJeu[socket.id];
+    delete joueursEnJeu["BOT_" + socket.id];
+    io.emit("mise_a_jour_joueurs", joueursEnJeu);
   });
 });
 
 server.listen(6969, "0.0.0.0", () => {
-  console.log("🚀 Serveur actif sur le port 6969 : http://localhost:6969/menu");
+  console.log("🚀 Serveur actif sur http://localhost:6969/menu");
 });
