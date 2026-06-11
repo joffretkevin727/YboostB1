@@ -4,35 +4,36 @@ body {
   height: 100vh;
   background-color: rgb(17, 17, 17);
   overflow: hidden;
-  position: relative; /* Indispensable pour le centrage absolu */
+  position: relative;
+  font-family: sans-serif;
 }
 
 canvas {
-  /* --- CENTRAGE ABSOLU ET INFAILLIBLE --- */
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-
-  /* --- GESTION DE LA TAILLE --- */
   max-width: 100vw;
   max-height: 100vh;
-  aspect-ratio: 16 / 9; /* Force le ratio de ton jeu (1600x900) */
+  aspect-ratio: 16 / 9;
   object-fit: contain;
+  image-rendering: pixelated;
+  background: rgb(0, 0, 0);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
 }
 
-/* Le reste ne change pas */
 .arena,
 .asset-cache {
   display: none;
 }
 
+/* LOBBY */
 #overlay-lobby {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
   z-index: 100;
@@ -41,15 +42,13 @@ canvas {
   align-items: center;
   color: white;
 }
-
 .lobby-content {
-  text-align: center;
-  background: #ff0505;
+  background: #222;
   padding: 40px;
   border-radius: 12px;
   border: 2px solid #444;
+  text-align: center;
 }
-
 .skin-grid {
   display: flex;
   gap: 20px;
@@ -76,117 +75,7 @@ canvas {
   display: none !important;
 }
 
-.loader {
-  border: 4px solid #333;
-  border-top: 4px solid #ffcc00;
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin: 20px auto;
-}
-@keyframes spin {
-  100% {
-    transform: rotate(360deg);
-  }
-}
-/* ==========================================
-   OVERLAY FIN DE PARTIE (MAGNIFIQUE)
-   ========================================== */
-#overlay-endgame {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(
-    10,
-    10,
-    15,
-    0.85
-  ); /* Fond très sombre et légèrement bleuté */
-  backdrop-filter: blur(12px); /* Flou puissant en arrière-plan */
-  z-index: 200;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.endgame-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 30px; /* Espace propre entre l'image et les boutons */
-  /* Animation d'apparition avec un petit effet de rebond dynamique */
-  animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-#endgame-image {
-  max-width: 80vw;
-  max-height: 60vh; /* LA MAGIE EST ICI : l'image ne dépassera jamais 60% de ton écran */
-  object-fit: contain;
-  /* Effet de lueur (Glow) dorée autour de l'image */
-  filter: drop-shadow(0 0 25px rgba(255, 204, 0, 0.4));
-}
-
-/* Le conteneur pour aligner les deux boutons côte à côte */
-.endgame-buttons {
-  display: flex;
-  gap: 20px;
-}
-
-/* Base commune des boutons */
-.btn-action {
-  padding: 15px 40px;
-  font-size: 20px;
-  font-weight: bold;
-  border-radius: 50px; /* Boutons arrondis très modernes */
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-/* Style du bouton "REJOUER" (Principal) */
-.btn-primary {
-  background: linear-gradient(45deg, #ffcc00, #ff9900);
-  color: #111;
-  border: none;
-  box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4);
-}
-
-.btn-primary:hover {
-  transform: translateY(-4px) scale(1.05); /* Le bouton se soulève au survol */
-  box-shadow: 0 8px 25px rgba(255, 204, 0, 0.6);
-}
-
-/* Style du bouton "RETOUR AU MENU" (Secondaire) */
-.btn-secondary {
-  background: transparent;
-  color: #fff;
-  border: 2px solid #fff;
-}
-
-.btn-secondary:hover {
-  background: #fff;
-  color: #111;
-  transform: translateY(-4px);
-}
-
-@keyframes popIn {
-  0% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-/* ==========================================
-   OVERLAY DU COMPTE À REBOURS (3, 2, 1...)
-   ========================================== */
+/* COMPTE A REBOURS */
 #overlay-countdown {
   position: absolute;
   top: 0;
@@ -196,21 +85,19 @@ canvas {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 150; /* Au-dessus du jeu, sous l'écran de fin */
-  pointer-events: none; /* Empêche de bloquer les clics si besoin */
+  z-index: 150;
+  pointer-events: none;
 }
-
 #countdown-text {
   font-size: 180px;
   color: #ffcc00;
+  font-family: Impact, sans-serif;
+  margin: 0;
   text-shadow:
     0 0 40px rgba(255, 204, 0, 0.8),
     0 0 10px #000;
-  font-family: Impact, sans-serif;
-  margin: 0;
   animation: heartbeat 1s infinite;
 }
-
 @keyframes heartbeat {
   0% {
     transform: scale(0.8);
@@ -223,5 +110,90 @@ canvas {
   100% {
     transform: scale(1);
     opacity: 0;
+  }
+}
+
+/* ECRAN DE FIN */
+#overlay-endgame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.endgame-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+#endgame-image {
+  max-width: 80vw;
+  max-height: 60vh;
+  object-fit: contain;
+  filter: drop-shadow(0 0 25px rgba(255, 204, 0, 0.4));
+}
+.endgame-buttons {
+  display: flex;
+  gap: 20px;
+}
+.btn-action {
+  padding: 15px 40px;
+  font-size: 20px;
+  font-weight: bold;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+}
+.btn-primary {
+  background: linear-gradient(45deg, #ffcc00, #ff9900);
+  color: #111;
+  border: none;
+  box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4);
+}
+.btn-primary:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(255, 204, 0, 0.6);
+}
+.btn-secondary {
+  background: transparent;
+  color: #fff;
+  border: 2px solid #fff;
+}
+.btn-secondary:hover {
+  background: #fff;
+  color: #111;
+  transform: translateY(-4px);
+}
+@keyframes popIn {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.loader {
+  border: 4px solid #333;
+  border-top: 4px solid #ffcc00;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
   }
 }

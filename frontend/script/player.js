@@ -1,14 +1,22 @@
 class Player {
-  constructor({ startX, startY, skin, isLocal = false, socket = null }) {
+  constructor({
+    startX,
+    startY,
+    skin,
+    isLocal = false,
+    isBot = false,
+    socket = null,
+    id = null,
+  }) {
     this.x = startX;
     this.y = startY;
     this.direction = startX < 800 ? "droite" : "gauche";
     this.isLocal = isLocal;
+    this.isBot = isBot;
     this.socket = socket;
+    this.id = id;
     this.skin = skin;
-
-    // NOUVEAU : Le joueur est verrouillé par défaut (ne peut pas bouger/tirer)
-    this.verrouille = true;
+    this.verrouille = true; // Minuteur
 
     this.spritePath = `/frontend/assets/man/${skin}/`;
     this.sprite = new Image();
@@ -19,25 +27,22 @@ class Player {
     this.timerAnim = null;
     this.health = 100;
     this.maxHealth = 100;
-
     this.pressed = { haut: false, bas: false, gauche: false, droite: false };
     this.lastHorizontal = "";
+    this.enMouvement = false;
 
     this.projectiles = [];
     this.projectileSpeed = 8;
     this.projectileDamage = 10;
     this.shotCooldown = false;
 
-    if (this.isLocal) this._setupKeyboardListeners();
+    if (this.isLocal && !this.isBot) this._setupKeyboardListeners();
   }
 
   _setupKeyboardListeners() {
     window.addEventListener("keydown", (e) => {
-      // SI LE JOUEUR EST MORT OU VERROUILLÉ, ON NE FAIT RIEN
       if (this.health <= 0 || this.verrouille) return;
-
       const key = e.key.toLowerCase();
-
       if (key === "d") {
         this.pressed.droite = true;
         this.lastHorizontal = "droite";
@@ -48,7 +53,6 @@ class Player {
       }
       if (key === "z") this.pressed.haut = true;
       if (key === "s") this.pressed.bas = true;
-
       if (key === "a" && !this.shotCooldown) this.tirerManuel();
       if (key === "e") this.demanderPoseBoite();
     });
@@ -65,30 +69,33 @@ class Player {
   tirerManuel() {
     this.shotCooldown = true;
     const pX = this.direction === "droite" ? this.x + 50 : this.x + 10;
-    const proj = { x: pX, y: this.y + 32, direction: this.direction };
+    const proj = {
+      x: pX,
+      y: this.y + 32,
+      direction: this.direction,
+      ownerId: this.id,
+    };
     this.projectiles.push(proj);
 
-    if (this.socket) this.socket.emit("action_tir", proj);
+    if (this.socket && !this.isBot) this.socket.emit("action_tir", proj);
     setTimeout(() => (this.shotCooldown = false), 400);
   }
 
   demanderPoseBoite() {
     const boiteX = this.direction === "droite" ? this.x + 50 : this.x - 50;
-    if (this.socket)
+    if (this.socket && !this.isBot)
       this.socket.emit("poser_boite", { x: boiteX, y: this.y + 12 });
   }
 
   checkCollision(futurX, futurY, obstacles) {
-    const hitboxWidth = 30;
-    const hitboxHeight = 40;
+    const hitboxW = 30;
+    const hitboxH = 40;
     const offsetX = 17;
     const offsetY = 20;
-
     const pGauche = futurX + offsetX;
-    const pDroite = futurX + offsetX + hitboxWidth;
+    const pDroite = futurX + offsetX + hitboxW;
     const pHaut = futurY + offsetY;
-    const pBas = futurY + offsetY + hitboxHeight;
-
+    const pBas = futurY + offsetY + hitboxH;
     for (let obs of obstacles) {
       if (
         pGauche < obs.x + obs.w &&
@@ -104,14 +111,11 @@ class Player {
   updateProjectiles(ctx, adversaires, obstacles) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       let p = this.projectiles[i];
-
-      if (p.direction === "droite") p.x += this.projectileSpeed;
-      else p.x -= this.projectileSpeed;
-
+      p.x +=
+        p.direction === "droite" ? this.projectileSpeed : -this.projectileSpeed;
       ctx.fillStyle = "#ffcc00";
       ctx.fillRect(p.x, p.y, 10, 4);
-
-      let détruit = false;
+      let detruit = false;
 
       for (let obs of obstacles) {
         if (
@@ -121,11 +125,11 @@ class Player {
           p.y + 4 > obs.y
         ) {
           this.projectiles.splice(i, 1);
-          détruit = true;
+          detruit = true;
           break;
         }
       }
-      if (détruit) continue;
+      if (detruit) continue;
 
       if (this.isLocal && adversaires) {
         for (let adv of adversaires) {
@@ -136,19 +140,21 @@ class Player {
             p.y > adv.y &&
             p.y < adv.y + 64
           ) {
-            if (this.socket)
+            if (this.socket) {
               this.socket.emit("infliger_degat", {
                 cibleId: adv.id,
                 montant: this.projectileDamage,
+                tireurId: this.id,
+                tireurIsBot: this.isBot,
               });
+            }
             this.projectiles.splice(i, 1);
-            détruit = true;
+            detruit = true;
             break;
           }
         }
       }
-
-      if (!détruit && (p.x < 0 || p.x > ctx.canvas.width))
+      if (!detruit && (p.x < 0 || p.x > ctx.canvas.width))
         this.projectiles.splice(i, 1);
     }
   }
@@ -156,11 +162,9 @@ class Player {
   update(ctx, adversaires = [], obstacles = []) {
     if (this.health <= 0) return;
 
-    // --- GESTION DU JOUEUR LOCAL (Celui que tu contrôles) ---
     if (this.isLocal && !this.verrouille) {
       let enMouvement = false;
       let vitesse = 2.5;
-
       const bougeH =
         (this.pressed.droite &&
           (this.lastHorizontal === "droite" || !this.pressed.gauche)) ||
@@ -198,31 +202,23 @@ class Player {
         futurY += vitesse;
         enMouvement = true;
       }
-
       if (!this.checkCollision(this.x, futurY, obstacles)) this.y = futurY;
 
-      // On sauvegarde l'état local
       this.enMouvement = enMouvement;
       this.enMouvement ? this.startAnim() : this.stopAnim();
 
-      // On ENVOIE l'info au serveur
-      if (this.socket) {
+      if (this.socket && !this.isBot) {
         this.socket.emit("action_deplacement", {
           x: this.x,
           y: this.y,
           direction: this.direction,
-          enMouvement: this.enMouvement, // L'info part ici !
+          enMouvement: this.enMouvement,
         });
       }
     }
 
-    // --- GESTION DU JOUEUR ADVERSE (Fantôme réseau) ---
-    if (!this.isLocal) {
-      // S'il reçoit l'ordre de bouger du réseau, il s'anime !
-      this.enMouvement ? this.startAnim() : this.stopAnim();
-    }
+    if (!this.isLocal) this.enMouvement ? this.startAnim() : this.stopAnim();
 
-    // --- LE RENDU GRAPHIQUE ---
     ctx.save();
     if (this.direction === "gauche") {
       ctx.translate(this.x + 64, this.y);
@@ -262,7 +258,6 @@ class Player {
     ctx.fillStyle = "#32cd32";
     ctx.fillRect(barreX, this.y - 12, grandeur * pct, 6);
   }
-
   isDead() {
     return this.health <= 0;
   }

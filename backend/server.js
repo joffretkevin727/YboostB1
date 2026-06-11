@@ -37,7 +37,7 @@ io.on("connection", (socket) => {
   // ==========================================
   socket.on("demander_slot", () => {
     // Détermine le slot libre (p1 ou p2)
-    const rolesActuels = Object.values(joueursConnectes).map(j => j.slot);
+    const rolesActuels = Object.values(joueursConnectes).map((j) => j.slot);
     const slot = rolesActuels.includes("p1") ? "p2" : "p1";
     const roleGame = slot === "p1" ? "j1" : "j2";
 
@@ -65,7 +65,6 @@ io.on("connection", (socket) => {
   socket.on("update_lobby_info", (data) => {
     const j = joueursConnectes[socket.id];
     if (!j) return;
-
     j.skin = data.skin;
     j.pseudo = data.pseudo;
     io.emit("mise_a_jour_lobby", joueursConnectes);
@@ -84,15 +83,11 @@ io.on("connection", (socket) => {
     io.emit("mise_a_jour_lobby", joueursConnectes);
 
     const tousLesJoueurs = Object.values(joueursConnectes);
-    if (tousLesJoueurs.length === 2 && tousLesJoueurs.every((p) => p.pret)) {
-      console.log("⏱️ Tout le monde est prêt. Déclenchement du décompte du lobby !");
-      io.emit("declencher_decompte");
-
-      // Lance l'instance de jeu à la fin du décompte du lobby (5 secondes)
-      setTimeout(() => {
-        console.log("⚔️ Partie lancée !");
-        io.emit("lancement_partie", joueursConnectes);
-      }, 3000);
+    if (tousLesJoueurs.length === 2 && tousLesJoueurs.every((p) => p.ready)) {
+      console.log("⚔️ Partie lancée !");
+      io.emit("lancement_partie", joueursConnectes);
+    } else {
+      io.emit("attente_file", { connectes: tousLesJoueurs.length });
     }
   });
 
@@ -101,9 +96,38 @@ io.on("connection", (socket) => {
   // ==========================================
   socket.emit("init_base", { role: "j1", boites: boitesDynamiques }); // Compatibilité avec ton canvas init_base
 
+  // --- MODE SOLO VS BOT ---
+  socket.on("choix_skin_bot", (data) => {
+    const j = joueursConnectes[socket.id];
+    if (!j) return;
+    j.skin = data.skin;
+    j.ready = true;
+
+    const botId = "BOT_" + socket.id;
+    joueursConnectes[botId] = {
+      id: botId,
+      role: "j2",
+      x: MAP_W - 200,
+      y: MAP_H - 200,
+      direction: "gauche",
+      health: 100,
+      mursPoses: 0,
+      skin: "skin4",
+      ready: true,
+      isBot: true,
+      enMouvement: false,
+    };
+
+    socket.emit("lancement_partie", {
+      [socket.id]: joueursConnectes[socket.id],
+      [botId]: joueursConnectes[botId],
+    });
+  });
+
+  // --- ACTIONS EN JEU ---
   socket.on("action_deplacement", (data) => {
     const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0) return;
+    if (!j || j.health <= 0 || !j.ready) return;
 
     if (
       data.x >= REBORD &&
@@ -114,7 +138,7 @@ io.on("connection", (socket) => {
       j.x = data.x;
       j.y = data.y;
       j.direction = data.direction;
-      j.enMouvement = data.enMouvement; // NOUVEAU : Le serveur enregistre si le joueur marche
+      j.enMouvement = data.enMouvement;
       socket.broadcast.emit("mise_a_jour_joueurs", joueursConnectes);
     }
   });
@@ -140,7 +164,7 @@ io.on("connection", (socket) => {
       if (cible.health <= 0) {
         console.log(`💀 Fin de partie : ${tireur.id} a éliminé ${cible.id} !`);
         io.emit("fin_de_partie", {
-          vainqueurId: tireur.id,
+          vainqueurId: vainqueurId,
           perdantId: cible.id,
         });
 
@@ -175,6 +199,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log(`🔴 Joueur déconnecté : ${socket.id}`);
     delete joueursConnectes[socket.id];
+    delete joueursConnectes["BOT_" + socket.id];
     if (Object.keys(joueursConnectes).length === 0) boitesDynamiques = [];
     io.emit("mise_a_jour_lobby", joueursConnectes);
     io.emit("mise_a_jour_joueurs", joueursConnectes);
@@ -182,5 +207,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(6969, "0.0.0.0", () => {
-  console.log("🚀 Serveur Multijoueur actif sur : http://localhost:6969/menu");
+  console.log("🚀 Serveur actif sur le port 6969 : http://localhost:6969/menu");
 });
