@@ -103,35 +103,51 @@ function remonterInfosLobby() {
 }
 
 socket.on("mise_a_jour_lobby", (reponseServeur) => {
+
+    const joueurP2Existe = Object.values(reponseServeur).some(
+        joueur => joueur.slot === "p2"
+    );
+
+    const containerP2 = document.getElementById("skin-container-p2");
+
+    if (containerP2) {
+        if (joueurP2Existe) {
+            containerP2.classList.remove("hidden");
+        } else {
+            containerP2.classList.add("hidden");
+        }
+    }
+
     const listeIds = Object.keys(reponseServeur);
-    
+
     listeIds.forEach((id) => {
+
         const donnéesJoueur = reponseServeur[id];
-        // On utilise le slot stocké par le serveur pour chaque joueur
-        const slotId = donnéesJoueur.slot; 
+        const slotId = donnéesJoueur.slot;
 
-        if (slotId) {
-            const imgPreview = document.getElementById(`img-preview-${slotId}`);
-            if (imgPreview) {
-                imgPreview.src = `/frontend/assets/man/${donnéesJoueur.skin || 'skin1'}/000.png`;
-                imgPreview.classList.remove("hidden");
+        if (!slotId) return;
+
+        const imgPreview = document.getElementById(`img-preview-${slotId}`);
+
+        if (imgPreview) {
+            imgPreview.src = `/frontend/assets/man/${donnéesJoueur.skin || "skin1"}/000.png`;
+        }
+
+        if (id !== socket.id) {
+
+            const pseudoDistant = document.getElementById("pseudo-distant");
+
+            if (pseudoDistant) {
+                pseudoDistant.innerText = donnéesJoueur.pseudo || "Adversaire";
             }
 
-            if (slotId === "p2") {
-                const emptyLabel = document.getElementById("empty-preview-p2");
-                if (emptyLabel) emptyLabel.classList.add("hidden");
-            }
+            const statutP2 = document.getElementById("statut-p2");
 
-            // Si c'est l'adversaire, on met à jour ses textes (pseudo / prêt)
-            if (id !== socket.id) {
-                const pseudoDistant = document.getElementById("pseudo-distant");
-                if (pseudoDistant) pseudoDistant.innerText = donnéesJoueur.pseudo || "Adversaire";
-                
-                const statutP2 = document.getElementById("statut-p2");
-                if (statutP2) {
-                    statutP2.innerText = donnéesJoueur.pret ? "Prêt" : "Pas prêt";
-                    statutP2.style.color = donnéesJoueur.pret ? "#2ecc71" : "#ff3333";
-                }
+            if (statutP2) {
+                statutP2.innerText = donnéesJoueur.pret ? "Prêt" : "Pas prêt";
+                statutP2.style.color = donnéesJoueur.pret
+                    ? "#2ecc71"
+                    : "#ff3333";
             }
         }
     });

@@ -194,19 +194,19 @@ body {
     object-fit: cover;
     image-rendering: pixelated;
     z-index: -1;
-    clip-path: polygon(0 0, 107% 0, 0 105%, 0 100%);
+    clip-path: polygon(0 0, 108% 0, 0 113%, 0 100%);
 }
 
 /* --- LIGNE DE SÉPARATION ALIGNÉE --- */
 .lobby-separator {
     position: absolute;
     top: 0;
-    left: 55.75%; /* Ajusté chirurgicalement pour couvrir la jointure des deux clips */
-    width: 12px;
+    left: 57.75%; /* Ajusté chirurgicalement pour couvrir la jointure des deux clips */
+    width: 100px;
     height: 100%;
     background-color: white;
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
-    transform: skewX(-62.8deg);
+    transform: skewX(-60deg);
     z-index: 5; 
 }
 
@@ -218,26 +218,30 @@ body {
     justify-content: center; /* Centre le contenu horizontalement */
     gap: 15px;
     z-index: 10;
-    width: 600px; /* Donne une largeur fixe pour éviter que les flèches sortent */
-    height: 500px;
+    width: 40vmin;
+    height: 40vmin;
 }
 
 /* Garde tes emplacements exacts, mais centrés sur la box */
 #skin-container-p1 {
-    right: 60%;
-    top: 20%; 
-    transform: translateX(50%); /* Compense la largeur de la box pour un centrage parfait */
+    position: absolute;
+    top: 25vh;
+    left: calc(50vw - 30vmin);
+}
+
+#img-preview-p1 {
+    transform: scaleX(-1);
 }
 
 #skin-container-p2 {
-    top: 50%;
-    right: 30%;
-    transform: translateX(50%);
+    position: absolute;
+    top: 50vh;
+    left: calc(50vw + 10vmin);
 }
 
 .skin-display {
-    width: 200px;
-    height: 200px;
+    width: 25vmin;
+    height: 25vmin;
     display: flex;
     align-items: center;
     justify-content: center;
