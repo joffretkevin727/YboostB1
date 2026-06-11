@@ -5,16 +5,14 @@ class Player {
     this.direction = startX < 800 ? "droite" : "gauche";
     this.isLocal = isLocal;
     this.socket = socket;
-
-    // NOUVEAU : On sauvegarde proprement le nom du skin en mémoire ("skin1", "skin2"...)
     this.skin = skin;
 
-    // Chemin absolu pour le skin choisi
+    // NOUVEAU : Le joueur est verrouillé par défaut (ne peut pas bouger/tirer)
+    this.verrouille = true;
+
     this.spritePath = `/frontend/assets/man/${skin}/`;
     this.sprite = new Image();
     this.sprite.src = `${this.spritePath}000.png`;
-
-    // ... la suite de ton code ne change pas
 
     this.numFrame = 0;
     this.maxFrames = 5;
@@ -35,7 +33,9 @@ class Player {
 
   _setupKeyboardListeners() {
     window.addEventListener("keydown", (e) => {
-      if (this.health <= 0) return;
+      // SI LE JOUEUR EST MORT OU VERROUILLÉ, ON NE FAIT RIEN
+      if (this.health <= 0 || this.verrouille) return;
+
       const key = e.key.toLowerCase();
 
       if (key === "d") {
@@ -69,7 +69,7 @@ class Player {
     this.projectiles.push(proj);
 
     if (this.socket) this.socket.emit("action_tir", proj);
-    setTimeout(() => (this.shotCooldown = false), 400); // Cadence de tir
+    setTimeout(() => (this.shotCooldown = false), 400);
   }
 
   demanderPoseBoite() {
@@ -156,7 +156,8 @@ class Player {
   update(ctx, adversaires = [], obstacles = []) {
     if (this.health <= 0) return;
 
-    if (this.isLocal) {
+    // --- GESTION DU JOUEUR LOCAL (Celui que tu contrôles) ---
+    if (this.isLocal && !this.verrouille) {
       let enMouvement = false;
       let vitesse = 2.5;
 
@@ -200,16 +201,28 @@ class Player {
 
       if (!this.checkCollision(this.x, futurY, obstacles)) this.y = futurY;
 
-      enMouvement ? this.startAnim() : this.stopAnim();
+      // On sauvegarde l'état local
+      this.enMouvement = enMouvement;
+      this.enMouvement ? this.startAnim() : this.stopAnim();
 
-      if (this.socket)
+      // On ENVOIE l'info au serveur
+      if (this.socket) {
         this.socket.emit("action_deplacement", {
           x: this.x,
           y: this.y,
           direction: this.direction,
+          enMouvement: this.enMouvement, // L'info part ici !
         });
+      }
     }
 
+    // --- GESTION DU JOUEUR ADVERSE (Fantôme réseau) ---
+    if (!this.isLocal) {
+      // S'il reçoit l'ordre de bouger du réseau, il s'anime !
+      this.enMouvement ? this.startAnim() : this.stopAnim();
+    }
+
+    // --- LE RENDU GRAPHIQUE ---
     ctx.save();
     if (this.direction === "gauche") {
       ctx.translate(this.x + 64, this.y);

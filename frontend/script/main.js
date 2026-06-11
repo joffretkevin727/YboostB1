@@ -118,10 +118,10 @@ socket.on("attente_file", (data) => {
 });
 
 socket.on("lancement_partie", (serveurJoueurs) => {
-  // Ferme le lobby
+  // 1. Ferme le lobby
   document.getElementById("overlay-lobby").classList.add("hidden");
 
-  // Génère les entités des joueurs
+  // 2. Génère les entités des joueurs (Ils apparaissent mais sont verrouillés par défaut)
   for (let id in serveurJoueurs) {
     const sj = serveurJoueurs[id];
     if (id === socket.id) {
@@ -142,7 +142,40 @@ socket.on("lancement_partie", (serveurJoueurs) => {
       listeJoueursAdverses[id].id = id;
     }
   }
+
+  // 3. On affiche la partie en arrière-plan
   partieEnCours = true;
+
+  // 4. Lancement du compte à rebours de 3 secondes
+  const overlayCd = document.getElementById("overlay-countdown");
+  const textCd = document.getElementById("countdown-text");
+
+  overlayCd.classList.remove("hidden"); // Affiche le gros texte
+
+  let compteur = 3;
+  textCd.innerText = compteur;
+
+  // Création du minuteur qui se déclenche toutes les 1000 millisecondes (1 seconde)
+  const timer = setInterval(() => {
+    compteur--;
+
+    if (compteur > 0) {
+      textCd.innerText = compteur;
+    } else if (compteur === 0) {
+      // À 0, on affiche FIGHT et on change la couleur
+      textCd.innerText = "FIGHT !";
+      textCd.style.color = "#ff4c4c"; // Rouge agressif
+    } else {
+      // Après FIGHT (quand compteur passe à -1), on nettoie tout
+      clearInterval(timer);
+      overlayCd.classList.add("hidden");
+
+      // DÉVERROUILLAGE DU JOUEUR LOCAL ! La partie commence vraiment
+      if (monJoueurLocal) {
+        monJoueurLocal.verrouille = false;
+      }
+    }
+  }, 1000);
 });
 
 // Synchronisation des déplacements
@@ -158,6 +191,8 @@ socket.on("mise_a_jour_joueurs", (serveurJoueurs) => {
       listeJoueursAdverses[id].y = sj.y;
       listeJoueursAdverses[id].direction = sj.direction;
       listeJoueursAdverses[id].health = sj.health;
+      // NOUVEAU : On applique l'état de mouvement à l'adversaire
+      listeJoueursAdverses[id].enMouvement = sj.enMouvement;
     }
   }
 
