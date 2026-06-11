@@ -124,10 +124,6 @@ body {
 }
 /* --- CONFIGURATION  LOBBY  --- */
 
-.hidden { /* cacher le decompte*/
-    display: none !important;
-}
-
 .sidebar-lobby {
     position: absolute;
     top: 0;
@@ -214,14 +210,91 @@ body {
     z-index: 5; 
 }
 
+/* --- BOITES DE SÉLECTION DES SKINS --- */
+.skin-selector-box {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center; /* Centre le contenu horizontalement */
+    gap: 15px;
+    z-index: 10;
+    width: 600px; /* Donne une largeur fixe pour éviter que les flèches sortent */
+    height: 500px;
+}
+
+/* Garde tes emplacements exacts, mais centrés sur la box */
+#skin-container-p1 {
+    right: 60%;
+    top: 20%; 
+    transform: translateX(50%); /* Compense la largeur de la box pour un centrage parfait */
+}
+
+#skin-container-p2 {
+    top: 50%;
+    right: 30%;
+    transform: translateX(50%);
+}
+
+.skin-display {
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* Empêche le conteneur de rétrécir */
+}
+
+.skin-display img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+}
+
+.arrow-btn {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 40px; /* Légèrement plus grand pour tes gros persos */
+    cursor: pointer;
+    transition: transform 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+
+.arrow-btn:hover {
+    transform: scale(1.2);
+    color: #b7d8ff;
+}
+
+/* NOUVEAU : Remplace ton ancien .hidden pour éviter le décalage au clic */
+.arrow-hidden {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.hidden { 
+    display: none !important;
+}
 
 /* --- OVERLAY DECOMPTE --- */
 #overlay-countdown {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.95);
+    background: rgba(0, 0, 0, 0.65); /* Noir semi-transparent pour voir le lobby derrière */
     z-index: 1000;
-    display: flex;
+    display: flex; /* Géré proprement avec .hidden */
     justify-content: center;
     align-items: center;
+}
+
+/* Style du texte du décompte */
+#countdown-text {
+    font-size: 80px;
+    font-weight: 900;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.6), 0 0 40px rgba(183, 216, 255, 0.4);
+    font-family: sans-serif;
 }

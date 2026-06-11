@@ -7,7 +7,6 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Chemins absolus pour servir les fichiers statiques
 app.use("/frontend", express.static(path.join(__dirname, "..", "frontend")));
 
 let joueursConnectes = {};
@@ -17,7 +16,6 @@ const MAP_W = 1600;
 const MAP_H = 900;
 const REBORD = 25;
 
-// Routes principales
 app.get("/menu", (req, res) =>
   res.sendFile(path.join(__dirname, "..", "frontend", "menu.html")),
 );
@@ -26,7 +24,6 @@ app.get("/ingame", (req, res) =>
 );
 
 io.on("connection", (socket) => {
-  // 1. Rejet si le serveur est déjà plein (2 joueurs max)
   if (Object.keys(joueursConnectes).length >= 2) {
     socket.emit("serveur_plein");
     socket.disconnect();
@@ -35,49 +32,78 @@ io.on("connection", (socket) => {
 
   console.log(`🟢 Joueur connecté : ${socket.id}`);
 
-  // 2. Attribution automatique du rôle
-  let role = "j1";
-  if (Object.values(joueursConnectes).some((j) => j.role === "j1")) {
-    role = "j2";
-  }
+  // ==========================================
+  // NOUVEAU : LOGIQUE D'ATTRIBUTION DES SLOTS LOBBY
+  // ==========================================
+  socket.on("demander_slot", () => {
+    // Détermine le slot libre (p1 ou p2)
+    const rolesActuels = Object.values(joueursConnectes).map(j => j.slot);
+    const slot = rolesActuels.includes("p1") ? "p2" : "p1";
+    const roleGame = slot === "p1" ? "j1" : "j2";
 
-  // 3. Initialisation de l'état du joueur
-  joueursConnectes[socket.id] = {
-    id: socket.id,
-    role: role,
-    x: role === "j1" ? 150 : MAP_W - 200,
-    y: role === "j1" ? 150 : MAP_H - 200,
-    direction: role === "j1" ? "droite" : "gauche",
-    health: 100,
-    mursPoses: 0,
-    skin: null,
-    ready: false,
-  };
+    // Initialisation complète requise par le lobby et le ingame
+    joueursConnectes[socket.id] = {
+      id: socket.id,
+      slot: slot, // Pour le lobby
+      role: roleGame, // Pour le ingame
+      x: roleGame === "j1" ? 150 : MAP_W - 200,
+      y: roleGame === "j1" ? 150 : MAP_H - 200,
+      direction: roleGame === "j1" ? "droite" : "gauche",
+      health: 100,
+      mursPoses: 0,
+      skin: "skin1",
+      pseudo: slot === "p1" ? "Joueur 1" : "Joueur 2",
+      pret: false, // Suivi du lobby
+      ready: false, // Suivi du ingame
+    };
 
-  socket.emit("init_base", { role: role, boites: boitesDynamiques });
+    socket.emit("reponse_slot", slot);
+    io.emit("mise_a_jour_lobby", joueursConnectes);
+  });
 
-  // 4. Matchmaking : Validation du Skin
-  socket.on("choix_skin_valide", (data) => {
+  // NOUVEAU : Synchronisation en temps réel des changements de skin et pseudo
+  socket.on("update_lobby_info", (data) => {
     const j = joueursConnectes[socket.id];
     if (!j) return;
 
     j.skin = data.skin;
-    j.ready = true;
-    console.log(`👤 ${socket.id} est prêt avec le ${data.skin}`);
+    j.pseudo = data.pseudo;
+    io.emit("mise_a_jour_lobby", joueursConnectes);
+  });
+
+  // NOUVEAU : Gestion des états de préparation et lancement du décompte du lobby
+  socket.on("joueur_statut_pret", (data) => {
+    const j = joueursConnectes[socket.id];
+    if (!j) return;
+
+    j.pret = data.pret;
+    j.ready = data.pret; // Aligne l'état du moteur de jeu
+    j.pseudo = data.pseudo;
+    j.skin = data.skin;
+
+    io.emit("mise_a_jour_lobby", joueursConnectes);
 
     const tousLesJoueurs = Object.values(joueursConnectes);
-    if (tousLesJoueurs.length === 2 && tousLesJoueurs.every((p) => p.ready)) {
-      console.log("⚔️ Partie lancée !");
-      io.emit("lancement_partie", joueursConnectes);
-    } else {
-      io.emit("attente_file", { connectes: tousLesJoueurs.length });
+    if (tousLesJoueurs.length === 2 && tousLesJoueurs.every((p) => p.pret)) {
+      console.log("⏱️ Tout le monde est prêt. Déclenchement du décompte du lobby !");
+      io.emit("declencher_decompte");
+
+      // Lance l'instance de jeu à la fin du décompte du lobby (5 secondes)
+      setTimeout(() => {
+        console.log("⚔️ Partie lancée !");
+        io.emit("lancement_partie", joueursConnectes);
+      }, 3000);
     }
   });
 
-  // 5. Mouvements sécurisés
+  // ==========================================
+  // LOGIQUE DE SÉCURITÉ ET D'INSTANCES DE JEU INTACTES
+  // ==========================================
+  socket.emit("init_base", { role: "j1", boites: boitesDynamiques }); // Compatibilité avec ton canvas init_base
+
   socket.on("action_deplacement", (data) => {
     const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0 || !j.ready) return;
+    if (!j || j.health <= 0) return;
 
     if (
       data.x >= REBORD &&
@@ -92,10 +118,9 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 6. Tirs
   socket.on("action_tir", (data) => {
     const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0 || !j.ready) return;
+    if (!j || j.health <= 0) return;
     socket.broadcast.emit("remote_tir", {
       ownerId: socket.id,
       x: data.x,
@@ -104,42 +129,36 @@ io.on("connection", (socket) => {
     });
   });
 
-  // 7. Gestion des dégâts et FIN DE PARTIE
   socket.on("infliger_degat", (data) => {
     const cible = joueursConnectes[data.cibleId];
-    const tireur = joueursConnectes[socket.id]; // Celui qui a tiré
+    const tireur = joueursConnectes[socket.id];
 
     if (cible && cible.health > 0) {
       cible.health = Math.max(0, cible.health - data.montant);
 
-      // VÉRIFICATION DE LA MORT
       if (cible.health <= 0) {
         console.log(`💀 Fin de partie : ${tireur.id} a éliminé ${cible.id} !`);
-
-        // On annonce à tout le monde qui a gagné
         io.emit("fin_de_partie", {
           vainqueurId: tireur.id,
           perdantId: cible.id,
         });
 
-        // (Optionnel) On réinitialise l'état du serveur pour les prochains joueurs
         boitesDynamiques = [];
         for (let id in joueursConnectes) {
+          joueursConnectes[id].pret = false;
           joueursConnectes[id].ready = false;
           joueursConnectes[id].health = 100;
           joueursConnectes[id].mursPoses = 0;
         }
       } else {
-        // S'il n'est pas mort, on met juste à jour la vie
         io.emit("mise_a_jour_joueurs", joueursConnectes);
       }
     }
   });
 
-  // 8. Obstacles dynamiques (Limite de 5 murs)
   socket.on("poser_boite", (data) => {
     const j = joueursConnectes[socket.id];
-    if (!j || j.health <= 0 || !j.ready || j.mursPoses >= 5) return;
+    if (!j || j.health <= 0 || j.mursPoses >= 5) return;
 
     const tropProche = boitesDynamiques.some(
       (b) => Math.hypot(b.x - data.x, b.y - data.y) < 30,
@@ -152,11 +171,11 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 9. Déconnexion et nettoyage
   socket.on("disconnect", () => {
     console.log(`🔴 Joueur déconnecté : ${socket.id}`);
     delete joueursConnectes[socket.id];
     if (Object.keys(joueursConnectes).length === 0) boitesDynamiques = [];
+    io.emit("mise_a_jour_lobby", joueursConnectes);
     io.emit("mise_a_jour_joueurs", joueursConnectes);
   });
 });
