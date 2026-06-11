@@ -114,6 +114,7 @@ io.on("connection", (socket) => {
       j.x = data.x;
       j.y = data.y;
       j.direction = data.direction;
+      j.enMouvement = data.enMouvement; // NOUVEAU : Le serveur enregistre si le joueur marche
       socket.broadcast.emit("mise_a_jour_joueurs", joueursConnectes);
     }
   });

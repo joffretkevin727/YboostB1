@@ -2,8 +2,7 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <title>Spaceship - Battle</title>
-    <link rel="icon" type="image/png" href="/frontend/assets/icon.png">
+    <title>Arène Multijoueur - YBoost B1</title>
     <link rel="stylesheet" href="/frontend/css/ingame.css" />
   </head>
   <body>
@@ -56,10 +55,13 @@
       </div>
     </div>
 
+    <div id="overlay-countdown" class="hidden">
+      <h1 id="countdown-text">3</h1>
+    </div>
+
     <div id="overlay-endgame" class="hidden">
       <div class="endgame-content">
         <img id="endgame-image" src="" alt="Résultat de la partie" />
-
         <div class="endgame-buttons">
           <button id="btn-rejouer" class="btn-action btn-primary">
             Rejouer
