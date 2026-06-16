@@ -1,5 +1,5 @@
 const socket = io();
-const modeJeu = localStorage.getItem("modeJeu") || "1vs1";
+const modeJeu = sessionStorage.getItem("modeJeu") || "1vs1";
 
 let monSlotJoueur = null;
 let monEquipe = null;
@@ -11,18 +11,16 @@ window.addEventListener("DOMContentLoaded", () => {
   const btnReady = document.getElementById("btn-Ready");
   if (btnReady) btnReady.querySelector("span").innerText = "PRÊT";
 
-  // On masque les slots 2 en 1v1 ou contre Bot
   if (modeJeu !== "2vs2") {
     document.getElementById("slot-A2").style.display = "none";
     document.getElementById("slot-B2").style.display = "none";
   }
 
-  // Association des événements sur les boutons "+" et les flèches
   TOUS_LES_SLOTS.forEach((slot) => {
     document
       .getElementById(`btn-add-${slot}`)
       ?.addEventListener("click", () => {
-        socket.emit("changer_slot", slot); // Demande au serveur de bouger à cette place
+        socket.emit("changer_slot", slot);
       });
     document
       .getElementById(`prev-skin-${slot}`)
@@ -76,13 +74,11 @@ socket.on("mise_a_jour_lobby", (reponse) => {
   const prets = joueurs.filter((j) => j.pret).length;
   let totalRequis = modeJeu === "2vs2" ? 4 : modeJeu === "bot" ? 1 : 2;
 
-  // Identifier mes propres données actualisées par le serveur
   const moi = joueurs.find((j) => j.id === socket.id);
   if (moi) {
     monSlotJoueur = moi.slot;
     monEquipe = moi.equipe;
 
-    // Si le serveur a annulé mon état prêt (car j'ai changé de slot)
     if (!moi.pret && localPret) {
       localPret = false;
       document.querySelector("#btn-Ready span").innerText = "PRÊT";
@@ -96,26 +92,23 @@ socket.on("mise_a_jour_lobby", (reponse) => {
       `EN ATTENTE (${prets}/${totalRequis})`;
   }
 
-  // Réinitialisation de tout l'affichage
   TOUS_LES_SLOTS.forEach((slot) => {
     const divGlobal = document.getElementById(`slot-${slot}`);
     if (!divGlobal) return;
 
     divGlobal.classList.remove("hidden");
-    document.getElementById(`btn-add-${slot}`).classList.remove("hidden"); // Affiche le '+'
-    document.getElementById(`content-${slot}`).classList.add("hidden"); // Cache le skin
+    document.getElementById(`btn-add-${slot}`).classList.remove("hidden");
+    document.getElementById(`content-${slot}`).classList.add("hidden");
     document.getElementById(`prev-skin-${slot}`).classList.add("hidden");
     document.getElementById(`next-skin-${slot}`).classList.add("hidden");
   });
 
-  // Affichage des joueurs connectés
   joueurs.forEach((j) => {
-    document.getElementById(`btn-add-${j.slot}`).classList.add("hidden"); // Cache le '+'
-    document.getElementById(`content-${j.slot}`).classList.remove("hidden"); // Affiche le joueur
+    document.getElementById(`btn-add-${j.slot}`).classList.add("hidden");
+    document.getElementById(`content-${j.slot}`).classList.remove("hidden");
     document.getElementById(`img-${j.slot}`).src =
       `/frontend/assets/man/${j.skin}/000.png`;
 
-    // Si c'est mon perso, je garde les flèches visibles si je ne suis pas prêt
     if (j.id === socket.id && !localPret) {
       document.getElementById(`prev-skin-${j.slot}`).classList.remove("hidden");
       document.getElementById(`next-skin-${j.slot}`).classList.remove("hidden");
@@ -138,8 +131,9 @@ socket.on("lancement_partie_lobby", () => {
         countdownText.innerText = `Lancement dans ${tempsRestant}`;
     } else {
       clearInterval(interval);
-      localStorage.setItem("monSkin", `skin${indexSkinActuel}`);
-      localStorage.setItem("monEquipe", monEquipe);
+      // 🔴 CORRECTION ICI : sessionStorage au lieu de localStorage
+      sessionStorage.setItem("monSkin", `skin${indexSkinActuel}`);
+      sessionStorage.setItem("monEquipe", monEquipe);
       window.location.href = "/ingame";
     }
   }, 1000);

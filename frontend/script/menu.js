@@ -6,15 +6,15 @@ menuButtons.forEach((button) => {
 
     switch (action) {
       case "pvp":
-        localStorage.setItem("modeJeu", "1vs1");
+        sessionStorage.setItem("modeJeu", "1vs1");
         window.location.href = "/lobby";
         break;
       case "2pv2p":
-        localStorage.setItem("modeJeu", "2vs2");
+        sessionStorage.setItem("modeJeu", "2vs2");
         window.location.href = "/lobby";
         break;
       case "bot":
-        localStorage.setItem("modeJeu", "bot");
+        sessionStorage.setItem("modeJeu", "bot");
         window.location.href = "/lobby";
         break;
       case "credits":
