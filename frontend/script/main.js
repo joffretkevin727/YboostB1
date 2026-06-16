@@ -10,6 +10,7 @@ let listeJoueursAdverses = {};
 let mapObstacles = [];
 let boitesPosees = [];
 let partieEnCours = false;
+let areneInitialisee = false;
 
 // ==========================================
 // 1. INITIALISATION DE LA MAP ET DES COLLIDERS
@@ -73,9 +74,7 @@ function debugDessinerHitboxes(ctx) {
 // ==========================================
 // 2. CONNEXION ET LANCEMENT DE LA PARTIE
 // ==========================================
-
 window.addEventListener("DOMContentLoaded", () => {
-  // 🔴 CORRECTION ICI : On utilise sessionStorage pour isoler chaque onglet !
   const mode = sessionStorage.getItem("modeJeu") || "1vs1";
   const skin = sessionStorage.getItem("monSkin") || "skin1";
   const equipe = sessionStorage.getItem("monEquipe") || "A";
@@ -87,40 +86,44 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 socket.on("mise_a_jour_initiale_arene", (serveurJoueurs) => {
-  listeJoueursAdverses = {};
-
   for (let id in serveurJoueurs) {
     const sj = serveurJoueurs[id];
 
     if (id === socket.id) {
-      monJoueurLocal = new Player({
-        startX: sj.x,
-        startY: sj.y,
-        skin: sj.skin,
-        isLocal: true,
-        socket: socket,
-        id: socket.id,
-      });
-      monJoueurLocal.equipe = sj.equipe;
+      if (!monJoueurLocal) {
+        monJoueurLocal = new Player({
+          startX: sj.x,
+          startY: sj.y,
+          skin: sj.skin,
+          isLocal: true,
+          socket: socket,
+          id: socket.id,
+        });
+      }
+      monJoueurLocal.equipe = sj.equipe; // On s'assure d'avoir la bonne équipe
     } else {
       if (sj.isBot) {
-        monBot = new Bot({
-          startX: sj.x,
-          startY: sj.y,
-          skin: sj.skin,
-          socket: socket,
-          id: sj.id,
-          target: monJoueurLocal,
-        });
+        if (!monBot) {
+          monBot = new Bot({
+            startX: sj.x,
+            startY: sj.y,
+            skin: sj.skin,
+            socket: socket,
+            id: sj.id,
+            target: monJoueurLocal,
+          });
+        }
         monBot.equipe = sj.equipe;
       } else {
-        listeJoueursAdverses[id] = new Player({
-          startX: sj.x,
-          startY: sj.y,
-          skin: sj.skin,
-          isLocal: false,
-          id: id,
-        });
+        if (!listeJoueursAdverses[id]) {
+          listeJoueursAdverses[id] = new Player({
+            startX: sj.x,
+            startY: sj.y,
+            skin: sj.skin,
+            isLocal: false,
+            id: id,
+          });
+        }
         listeJoueursAdverses[id].equipe = sj.equipe;
       }
     }
@@ -128,28 +131,31 @@ socket.on("mise_a_jour_initiale_arene", (serveurJoueurs) => {
 
   partieEnCours = true;
 
-  const overlayCd = document.getElementById("overlay-countdown");
-  const textCd = document.getElementById("countdown-text");
+  if (!areneInitialisee) {
+    areneInitialisee = true;
+    const overlayCd = document.getElementById("overlay-countdown");
+    const textCd = document.getElementById("countdown-text");
 
-  if (overlayCd && textCd) {
-    overlayCd.classList.remove("hidden");
-    let compteur = 3;
-    textCd.innerText = compteur;
+    if (overlayCd && textCd) {
+      overlayCd.classList.remove("hidden");
+      let compteur = 3;
+      textCd.innerText = compteur;
 
-    const timer = setInterval(() => {
-      compteur--;
-      if (compteur > 0) {
-        textCd.innerText = compteur;
-      } else if (compteur === 0) {
-        textCd.innerText = "FIGHT !";
-        textCd.style.color = "#ff4c4c";
-      } else {
-        clearInterval(timer);
-        overlayCd.classList.add("hidden");
-        if (monJoueurLocal) monJoueurLocal.verrouille = false;
-        if (monBot) monBot.verrouille = false;
-      }
-    }, 1000);
+      const timer = setInterval(() => {
+        compteur--;
+        if (compteur > 0) {
+          textCd.innerText = compteur;
+        } else if (compteur === 0) {
+          textCd.innerText = "FIGHT !";
+          textCd.style.color = "#ff4c4c";
+        } else {
+          clearInterval(timer);
+          overlayCd.classList.add("hidden");
+          if (monJoueurLocal) monJoueurLocal.verrouille = false;
+          if (monBot) monBot.verrouille = false;
+        }
+      }, 1000);
+    }
   }
 });
 
@@ -192,7 +198,7 @@ socket.on("remote_tir", (data) => {
 socket.on("nouvelle_boite_ajoutee", (boite) => boitesPosees.push(boite));
 
 // ==========================================
-// 4. FIN DE PARTIE ET BOUTONS
+// 4. FIN DE PARTIE : VICTOIRE D'ÉQUIPE
 // ==========================================
 socket.on("fin_de_partie", (data) => {
   partieEnCours = false;
@@ -201,7 +207,8 @@ socket.on("fin_de_partie", (data) => {
 
   if (!overlayEnd || !imgEnd || !monJoueurLocal) return;
 
-  if (socket.id === data.vainqueurId) {
+  // 🔴 VÉRIFICATION INFAILLIBLE : Si MON équipe est l'équipe gagnante !
+  if (monJoueurLocal.equipe === data.equipeGagnante) {
     imgEnd.src = `/frontend/assets/party/win/win_${monJoueurLocal.skin}.png`;
   } else {
     imgEnd.src = `/frontend/assets/party/defeat/defeat_${monJoueurLocal.skin}.png`;
@@ -253,22 +260,15 @@ function gameLoop() {
 
   if (partieEnCours) {
     const tousLesObstacles = [...mapObstacles, ...boitesPosees];
-
     const tableauCibles = [...Object.values(listeJoueursAdverses)];
     if (monBot) tableauCibles.push(monBot);
 
-    if (monJoueurLocal && !monJoueurLocal.isDead()) {
+    if (monJoueurLocal)
       monJoueurLocal.update(ctx, tableauCibles, tousLesObstacles);
-    }
-
-    if (monBot && !monBot.isDead()) {
-      monBot.updateAI(ctx, tousLesObstacles);
-    }
+    if (monBot && !monBot.isDead()) monBot.updateAI(ctx, tousLesObstacles);
 
     for (let id in listeJoueursAdverses) {
-      if (!listeJoueursAdverses[id].isDead()) {
-        listeJoueursAdverses[id].update(ctx, [], tousLesObstacles);
-      }
+      listeJoueursAdverses[id].update(ctx, [], tousLesObstacles);
     }
 
     dessinerPremierPlan(ctx);

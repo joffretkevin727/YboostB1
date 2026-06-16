@@ -15,7 +15,7 @@ let boitesDynamiques = [];
 
 const MAP_W = 1600;
 const MAP_H = 900;
-const ORDRE_SLOTS = ["A1", "B1", "A2", "B2"]; // Ordre de remplissage naturel
+const ORDRE_SLOTS = ["A1", "B1", "A2", "B2"];
 
 app.get("/menu", (req, res) =>
   res.sendFile(path.join(__dirname, "..", "frontend", "menu.html")),
@@ -27,7 +27,6 @@ app.get("/lobby", (req, res) =>
   res.sendFile(path.join(__dirname, "..", "frontend", "lobby.html")),
 );
 
-// 🔄 FONCTION MAGIQUE : Décaler A2 sur A1 ou B2 sur B1 s'il y a un trou
 function verifierDecalageBrawlStars() {
   ["A", "B"].forEach((equipe) => {
     const joueur1 = Object.values(lobbyJoueurs).find(
@@ -36,8 +35,6 @@ function verifierDecalageBrawlStars() {
     const joueur2 = Object.values(lobbyJoueurs).find(
       (j) => j.slot === equipe + "2",
     );
-
-    // Si la place 1 est vide mais que la place 2 est prise, le joueur avance d'une case !
     if (!joueur1 && joueur2) {
       joueur2.slot = equipe + "1";
     }
@@ -45,17 +42,11 @@ function verifierDecalageBrawlStars() {
 }
 
 io.on("connection", (socket) => {
-  console.log(`🟢 Connecté : ${socket.id}`);
-
-  // ==========================================
-  // LOBBY BRAWL STARS - CONNEXION
-  // ==========================================
   socket.on("demander_slot_lobby", (modeJeu) => {
-    // Cherche le premier slot libre dans l'ordre (A1, puis B1, puis A2, puis B2)
     const slotsPris = Object.values(lobbyJoueurs).map((j) => j.slot);
     const slotChoisi = ORDRE_SLOTS.find((s) => !slotsPris.includes(s));
 
-    if (!slotChoisi) return; // Full
+    if (!slotChoisi) return;
 
     lobbyJoueurs[socket.id] = {
       id: socket.id,
@@ -65,33 +56,22 @@ io.on("connection", (socket) => {
       skin: "skin1",
       mode: modeJeu,
     };
-
     io.emit("mise_a_jour_lobby", lobbyJoueurs);
   });
 
-  // ==========================================
-  // CLIC SUR UN "+" POUR CHANGER DE PLACE
-  // ==========================================
   socket.on("changer_slot", (targetSlot) => {
     const j = lobbyJoueurs[socket.id];
     if (!j) return;
-
     const slotsPris = Object.values(lobbyJoueurs).map((p) => p.slot);
-
-    // Si la place cliquée est bien libre
     if (!slotsPris.includes(targetSlot)) {
       j.slot = targetSlot;
       j.equipe = targetSlot.startsWith("A") ? "A" : "B";
-      j.pret = false; // On décoche Prêt par sécurité
-
-      verifierDecalageBrawlStars(); // Vérifie s'il y a laissé un trou derrière lui
+      j.pret = false;
+      verifierDecalageBrawlStars();
       io.emit("mise_a_jour_lobby", lobbyJoueurs);
     }
   });
 
-  // ==========================================
-  // MISE À JOUR (Skin, Prêt)
-  // ==========================================
   socket.on("update_lobby_info", (data) => {
     if (lobbyJoueurs[socket.id]) {
       lobbyJoueurs[socket.id].pret = data.pret;
@@ -105,7 +85,6 @@ io.on("connection", (socket) => {
     const mode = tous[0].mode;
     const tousPrets = tous.every((j) => j.pret);
 
-    // Lancement de la game
     if (
       (mode === "1vs1" && tous.length === 2 && tousPrets) ||
       (mode === "bot" && tous.length === 1 && tousPrets) ||
@@ -117,7 +96,7 @@ io.on("connection", (socket) => {
   });
 
   // ==========================================
-  // ARÈNE (JEU EN COURS) - AUCUN CHANGEMENT
+  // ARÈNE : Gestion des Dégâts & Survie
   // ==========================================
   socket.on("rejoindre_arene", (data) => {
     const nbInTeam = Object.values(joueursEnJeu).filter(
@@ -180,12 +159,15 @@ io.on("connection", (socket) => {
   });
 
   socket.on("action_tir", (data) => {
-    socket.broadcast.emit("remote_tir", {
-      ownerId: socket.id,
-      x: data.x,
-      y: data.y,
-      direction: data.direction,
-    });
+    const j = joueursEnJeu[socket.id];
+    if (j && j.health > 0) {
+      socket.broadcast.emit("remote_tir", {
+        ownerId: socket.id,
+        x: data.x,
+        y: data.y,
+        direction: data.direction,
+      });
+    }
   });
 
   socket.on("infliger_degat", (data) => {
@@ -193,25 +175,36 @@ io.on("connection", (socket) => {
     const tireur = joueursEnJeu[socket.id] || joueursEnJeu[data.tireurId];
 
     if (cible && tireur && cible.health > 0) {
-      if (cible.equipe === tireur.equipe) return; // Friendly Fire DÉSACTIVÉ
+      if (cible.equipe === tireur.equipe) return; // Pas de tir ami
 
-      cible.health = Math.max(0, cible.health - data.montant);
-      if (cible.health <= 0) {
-        io.emit("fin_de_partie", {
-          vainqueurId: data.tireurId,
-          perdantId: cible.id,
-        });
+      cible.health -= data.montant;
+      if (cible.health <= 0) cible.health = 0;
+
+      io.emit("mise_a_jour_joueurs", joueursEnJeu);
+
+      // On compte TOUS les joueurs dont les HP sont supérieurs à 0 dans chaque équipe
+      const nbEnVieA = Object.values(joueursEnJeu).filter(
+        (j) => j.equipe === "A" && j.health > 0,
+      ).length;
+      const nbEnVieB = Object.values(joueursEnJeu).filter(
+        (j) => j.equipe === "B" && j.health > 0,
+      ).length;
+
+      // La partie s'arrête si et seulement si l'équipe A ou l'équipe B est totalement à 0
+      if (nbEnVieA === 0 || nbEnVieB === 0) {
+        const equipeGagnante = nbEnVieA === 0 ? "B" : "A";
+
+        // On envoie le résultat final à tout le monde
+        io.emit("fin_de_partie", { equipeGagnante: equipeGagnante });
         boitesDynamiques = [];
         joueursEnJeu = {};
-      } else {
-        io.emit("mise_a_jour_joueurs", joueursEnJeu);
       }
     }
   });
 
   socket.on("poser_boite", (data) => {
     const j = joueursEnJeu[socket.id];
-    if (j && j.mursPoses < 5) {
+    if (j && j.mursPoses < 5 && j.health > 0) {
       boitesDynamiques.push({ x: data.x, y: data.y, w: 40, h: 40 });
       j.mursPoses++;
       io.emit("nouvelle_boite_ajoutee", { x: data.x, y: data.y, w: 40, h: 40 });
@@ -221,10 +214,9 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (lobbyJoueurs[socket.id]) {
       delete lobbyJoueurs[socket.id];
-      verifierDecalageBrawlStars(); // Le fameux glissement !
+      verifierDecalageBrawlStars();
       io.emit("mise_a_jour_lobby", lobbyJoueurs);
     }
-
     delete joueursEnJeu[socket.id];
     delete joueursEnJeu["BOT_" + socket.id];
     io.emit("mise_a_jour_joueurs", joueursEnJeu);
