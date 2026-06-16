@@ -53,7 +53,7 @@ class Player {
       }
       if (key === "z") this.pressed.haut = true;
       if (key === "s") this.pressed.bas = true;
-      if (key === "a" && !this.shotCooldown) this.tirerManuel();
+      if (key === " " && !this.shotCooldown) this.tirerManuel();
       if (key === "e") this.demanderPoseBoite();
     });
 

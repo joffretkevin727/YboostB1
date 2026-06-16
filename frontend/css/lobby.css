@@ -1,0 +1,133 @@
+/* Conteneur global d'un emplacement */
+.lobby-slot {
+    position: absolute;
+    width: 250px; /* Augmenté de 140px à 250px */
+    height: 250px; /* Augmenté de 140px à 250px */
+    transform: translate(-50%, -50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    transition: all 0.3s ease;
+}
+
+/* --- POSITIONS DIAGONALES EXACTES --- */
+.pos-A1 {
+    top: 48%;
+    left: 43%;
+}
+
+/* Milieu en bas à gauche */
+.pos-A2 {
+    top: 63%;
+    left: 28%;
+}
+
+/* Encore plus bas à gauche */
+
+.pos-B1 {
+    top: 65%;
+    left: 73%;
+}
+
+/* Milieu à droite */
+.pos-B2 {
+    top: 80%;
+    left: 58%;
+}
+
+/* En bas à droite */
+
+/* Bouton + façon Brawl Stars */
+.empty-btn {
+    width: 80px; /* Légèrement augmenté pour rester proportionnel au slot */
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.7);
+    border: 3px dashed rgba(255, 255, 255, 0.6);
+    color: white;
+    font-size: 40px; /* Ajusté pour le nouveau bouton */
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+.empty-btn:hover {
+    border-color: white;
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+/* Conteneur du joueur actif */
+.player-content {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.img-skin {
+    width: 200px; /* Augmenté de 100px à 200px pour remplir le slot de 250px */
+    height: 200px; /* Augmenté de 100px à 200px */
+    object-fit: contain;
+    z-index: 2;
+    filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.8));
+}
+
+/* Lignes sous les pieds */
+.shadow-base {
+    position: absolute;
+    bottom: 20px; /* Descendu de 10px à 20px pour correspondre à la nouvelle taille */
+    width: 130px; /* Élargi de 70px à 130px pour correspondre aux pieds du grand sprite */
+    height: 8px; /* Épaissi de 5px à 8px */
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.shadow-A {
+    background: #ff4c4c;
+    box-shadow: 0 0 15px #ff4c4c;
+}
+
+.shadow-B {
+    background: #3498db;
+    box-shadow: 0 0 15px #3498db;
+}
+
+/* Flèches pour changer de skin */
+.arrow-btn {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid white;
+    color: white;
+    border-radius: 50%;
+    width: 40px; /* Augmenté de 30px à 40px pour une meilleure ergonomie */
+    height: 40px;
+    cursor: pointer;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px; /* Texte agrandi */
+    transition: 0.2s;
+}
+
+.arrow-btn:hover {
+    background: white;
+    color: black;
+    transform: scale(1.1);
+}
+
+.prev-arrow {
+    left: 5px; /* Ajusté de -10px à 5px pour rester proche du personnage */
+}
+
+.next-arrow {
+    right: 5px; /* Ajusté de -10px à 5px pour rester proche du personnage */
+}

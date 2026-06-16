@@ -1,84 +1,72 @@
 <!doctype html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Arène Multijoueur</title>
-    <link rel="stylesheet" href="/frontend/css/ingame.css" />
-  </head>
-  <body>
-    <img class="arena" src="/frontend/assets/arena/spaceship.png" />
-    <img
-      id="img-pilier1"
-      src="/frontend/assets/piliers/pilier1.png"
-      class="asset-cache"
-    />
-    <img
-      id="img-pilier2"
-      src="/frontend/assets/piliers/pilier2.png"
-      class="asset-cache"
-    />
-    <img
-      id="img-pilier3"
-      src="/frontend/assets/piliers/pilier3.png"
-      class="asset-cache"
-    />
-    <img
-      id="img-pilier4"
-      src="/frontend/assets/piliers/pilier3.png"
-      class="asset-cache"
-    />
-    <img
-      id="img-mur1"
-      src="/frontend/assets/piliers/mur1.png"
-      class="asset-cache"
-    />
-    <img
-      id="img-box"
-      src="/frontend/assets/piliers/mur1.png"
-      class="asset-cache"
-    />
 
-    <div id="overlay-lobby">
-      <div class="lobby-content" id="box-selection">
-        <h2>Choisissez votre Skin</h2>
-        <div class="skin-grid">
-          <div class="skin-card" data-skin="skin1"><p>Skin Alpha</p></div>
-          <div class="skin-card" data-skin="skin2"><p>Skin Beta</p></div>
-          <div class="skin-card" data-skin="skin3"><p>Skin Gamma</p></div>
-          <div class="skin-card" data-skin="skin4"><p>Skin Delta</p></div>
+<head>
+  <meta charset="UTF-8" />
+  <title>Spaceship - Battle</title>
+  <link rel="icon" type="image/png" href="/frontend/assets/icon.png">
+  <link rel="stylesheet" href="/frontend/css/ingame.css" />
+</head>
+
+<body>
+  <img class="arena" src="/frontend/assets/arena/spaceship.png" />
+  <img id="img-pilier1" src="/frontend/assets/piliers/pilier1.png" class="asset-cache" />
+  <img id="img-pilier2" src="/frontend/assets/piliers/pilier2.png" class="asset-cache" />
+  <img id="img-pilier3" src="/frontend/assets/piliers/pilier3.png" class="asset-cache" />
+  <img id="img-pilier4" src="/frontend/assets/piliers/pilier3.png" class="asset-cache" />
+  <img id="img-mur1" src="/frontend/assets/piliers/mur1.png" class="asset-cache" />
+  <img id="img-box" src="/frontend/assets/piliers/mur1.png" class="asset-cache" />
+
+  <div id="overlay-lobby">
+    <div class="lobby-content" id="box-selection">
+      <h2>Choisissez votre Skin</h2>
+      <div class="skin-grid">
+        <div class="skin-card" data-skin="skin1">
+          <p>Skin Alpha</p>
         </div>
-      </div>
-      <div class="lobby-content hidden" id="box-file-attente">
-        <h2>Matchmaking</h2>
-        <p class="loader"></p>
-        <p id="statut-file">En attente d'un second joueur prêt...</p>
-      </div>
-    </div>
-
-    <div id="overlay-countdown" class="hidden">
-      <h1 id="countdown-text">3</h1>
-    </div>
-
-    <div id="overlay-endgame" class="hidden">
-      <div class="endgame-content">
-        <img id="endgame-image" src="" alt="Résultat" />
-        <div class="endgame-buttons">
-          <button id="btn-rejouer" class="btn-action btn-primary">
-            Rejouer
-          </button>
-          <button id="btn-retour-menu" class="btn-action btn-secondary">
-            Retour au Menu
-          </button>
+        <div class="skin-card" data-skin="skin2">
+          <p>Skin Beta</p>
+        </div>
+        <div class="skin-card" data-skin="skin3">
+          <p>Skin Gamma</p>
+        </div>
+        <div class="skin-card" data-skin="skin4">
+          <p>Skin Delta</p>
         </div>
       </div>
     </div>
+    <div class="lobby-content hidden" id="box-file-attente">
+      <h2>Matchmaking</h2>
+      <p class="loader"></p>
+      <p id="statut-file">En attente d'un second joueur prêt...</p>
+    </div>
+  </div>
 
-    <canvas id="monCanvas" width="1600" height="900"></canvas>
+  <div id="overlay-countdown" class="hidden">
+    <h1 id="countdown-text">3</h1>
+  </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/frontend/script/arene.js"></script>
-    <script src="/frontend/script/player.js"></script>
-    <script src="/frontend/script/bot.js"></script>
-    <script src="/frontend/script/main.js"></script>
-  </body>
+  <div id="overlay-endgame" class="hidden">
+    <div class="endgame-content">
+      <img id="endgame-image" src="" alt="Résultat" />
+      <div class="endgame-buttons">
+        <button id="btn-rejouer" class="btn-action btn-primary">
+          Rejouer
+        </button>
+        <button id="btn-retour-menu" class="btn-action btn-secondary">
+          Retour au Menu
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="monCanvas" width="1600" height="900"></canvas>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/frontend/script/arene.js"></script>
+  <script src="/frontend/script/player.js"></script>
+  <script src="/frontend/script/bot.js"></script>
+  <script src="/frontend/script/main.js"></script>
+</body>
+
 </html>

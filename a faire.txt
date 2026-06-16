@@ -1,7 +1,0 @@
-Kevin liste de tache :
--
-
-
-
-Tom Liste de tache :
-- afficher l'animation du perso en 2 vs 2,
