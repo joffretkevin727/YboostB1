@@ -4,6 +4,18 @@ ctx.imageSmoothingEnabled = false; // Désactive l'anti-aliasing pour conserver 
 
 const socket = io(); // Ouvre le canal réseau pour la synchronisation en temps réel de la partie.
 
+// 🔊 CHARGEMENT DES SONS IN-GAME
+const sonDebut = new Audio("/frontend/assets/sounds/debut.mp3");
+const sonWin = new Audio("/frontend/assets/sounds/win.mp3");
+const sonLoose = new Audio("/frontend/assets/sounds/loose.mp3");
+const sonTireDistance = new Audio("/frontend/assets/sounds/tire.mp3");
+sonTireDistance.volume = 0.3;
+
+// 🎶 CHARGEMENT DE LA MUSIQUE DE FOND (Arène)
+const musiqueInGame = new Audio("/frontend/assets/sounds/sound_ingame.mp3");
+musiqueInGame.loop = true; // En boucle
+musiqueInGame.volume = 0.2; // Volume un peu plus bas pour bien entendre les tirs
+
 let monJoueurLocal = null;
 let monBot = null;
 let listeJoueursAdverses = {};
@@ -156,6 +168,14 @@ socket.on("mise_a_jour_initiale_arene", (serveurJoueurs) => {
         if (compteur > 0) {
           textCd.innerText = compteur;
         } else if (compteur === 0) {
+          // 🔊 LA PARTIE COMMENCE : On joue le son "debut.mp3"
+          sonDebut.currentTime = 0;
+          sonDebut.play().catch((e) => console.log(e));
+
+          // 🎶 Lancement de la musique de fond de l'arène
+          musiqueInGame.currentTime = 0;
+          musiqueInGame.play().catch((e) => console.log(e));
+
           textCd.innerText = "FIGHT !";
           textCd.style.color = "#ff4c4c";
         } else {
@@ -201,6 +221,10 @@ socket.on("mise_a_jour_joueurs", (serveurJoueurs) => {
 // Communication (Écouteur) : Reçoit l'ordre de générer visuellement un projectile tiré par un opposant distant.
 socket.on("remote_tir", (data) => {
   if (partieEnCours && listeJoueursAdverses[data.ownerId]) {
+    // 🔊 L'ADVERSAIRE TIRE : On joue le son de tir !
+    sonTireDistance.currentTime = 0;
+    sonTireDistance.play().catch((e) => console.log(e));
+
     listeJoueursAdverses[data.ownerId].projectiles.push({
       x: data.x,
       y: data.y,
@@ -223,10 +247,19 @@ socket.on("fin_de_partie", (data) => {
 
   if (!overlayEnd || !imgEnd || !monJoueurLocal) return;
 
-  // Compare l'équipe locale avec l'équipe déclarée gagnante par le serveur pour charger le bon actif graphique.
+  // 🛑 ON COUPE LA MUSIQUE D'AMBIANCE
+  musiqueInGame.pause();
+  musiqueInGame.currentTime = 0;
+
   if (monJoueurLocal.equipe === data.equipeGagnante) {
+    // 🔊 VICTOIRE !
+    sonWin.currentTime = 0;
+    sonWin.play().catch((e) => console.log(e));
     imgEnd.src = `/frontend/assets/party/win/win_${monJoueurLocal.skin}.png`;
   } else {
+    // 🔊 DÉFAITE !
+    sonLoose.currentTime = 0;
+    sonLoose.play().catch((e) => console.log(e));
     imgEnd.src = `/frontend/assets/party/defeat/defeat_${monJoueurLocal.skin}.png`;
   }
 

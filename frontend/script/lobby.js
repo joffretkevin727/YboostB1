@@ -7,6 +7,13 @@ let indexSkinActuel = 1;
 let localPret = false;
 const TOUS_LES_SLOTS = ["A1", "A2", "B1", "B2"];
 
+// 🔊 Chargement du son Bip
+const sonBip = new Audio("/frontend/assets/sounds/bip.mp3");
+function jouerBip() {
+  sonBip.currentTime = 0;
+  sonBip.play().catch((e) => console.log("Audio bloqué", e));
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   const btnReady = document.getElementById("btn-Ready");
   if (btnReady) btnReady.querySelector("span").innerText = "PRÊT";
@@ -23,14 +30,21 @@ window.addEventListener("DOMContentLoaded", () => {
       .getElementById(`btn-add-${slot}`)
       ?.addEventListener("click", () => {
         // Communication : Demande au serveur de déplacer le joueur sur ce slot précis.
+        jouerBip(); // 🔊
         socket.emit("changer_slot", slot);
       });
     document
       .getElementById(`prev-skin-${slot}`)
-      ?.addEventListener("click", () => majMonSkin(-1));
+      ?.addEventListener("click", () => {
+        jouerBip();
+        majMonSkin(-1);
+      });
     document
       .getElementById(`next-skin-${slot}`)
-      ?.addEventListener("click", () => majMonSkin(1));
+      ?.addEventListener("click", () => {
+        jouerBip();
+        majMonSkin(1);
+      });
   });
 
   // Communication : Signale l'entrée dans le lobby et demande l'attribution d'un slot initial selon le mode.
@@ -40,10 +54,12 @@ window.addEventListener("DOMContentLoaded", () => {
 document.querySelectorAll(".menu-btn").forEach((button) => {
   // Gère les actions du menu principal : retour, bascule visuelle des skins ou changement de statut (Prêt).
   button.addEventListener("click", () => {
+    jouerBip(); // 🔊
     const action = button.dataset.action;
 
-    if (action === "retour") window.location.href = "/menu";
-    else if (action === "skin") {
+    if (action === "retour") {
+      setTimeout(() => (window.location.href = "/menu"), 150); // Délai pour entendre le bip
+    } else if (action === "skin") {
       if (!monSlotJoueur) return;
       const btnPrev = document.getElementById(`prev-skin-${monSlotJoueur}`);
       const btnNext = document.getElementById(`next-skin-${monSlotJoueur}`);
