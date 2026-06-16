@@ -25,14 +25,6 @@
 
 ---
 
-## 🛠️ Technologies Utilisées
-
-- **Frontend** : HTML5, CSS3, Vanilla JavaScript, HTML5 Canvas API.
-- **Backend** : Node.js, Express.
-- **WebSockets** : Socket.io (Communication client-serveur bidirectionnelle).
-
----
-
 ## 📁 Architecture du Projet
 
 ```text
@@ -72,3 +64,11 @@
  ┣ 📜 LICENSE             # Licence d'utilisation du projet
  ┗ 📝 README.md           # Documentation globale du dépôt racine
 ```
+
+---
+
+## 🛠️ Technologies Utilisées
+
+- **Frontend** : HTML5, CSS3, Vanilla JavaScript, HTML5 Canvas API.
+- **Backend** : Node.js, Express.
+- **WebSockets** : Socket.io (Communication client-serveur bidirectionnelle).
