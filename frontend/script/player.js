@@ -77,6 +77,10 @@ class Player {
     };
     this.projectiles.push(proj);
 
+    let monSonDeTir = new Audio("/frontend/assets/sounds/tire.mp3");
+    monSonDeTir.volume = 0.5; // (Volume réglable)
+    monSonDeTir.play();
+
     if (this.socket && !this.isBot) this.socket.emit("action_tir", proj);
     setTimeout(() => (this.shotCooldown = false), 400);
   }
