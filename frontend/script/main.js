@@ -1,8 +1,8 @@
 const canvas = document.getElementById("monCanvas");
 const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
+ctx.imageSmoothingEnabled = false; // Désactive l'anti-aliasing pour conserver un rendu Pixel Art net.
 
-const socket = io();
+const socket = io(); // Ouvre le canal réseau pour la synchronisation en temps réel de la partie.
 
 let monJoueurLocal = null;
 let monBot = null;
@@ -16,6 +16,7 @@ let areneInitialisee = false;
 // 1. INITIALISATION DE LA MAP ET DES COLLIDERS
 // ==========================================
 function initialiserObstacles() {
+  // Renvoie un tableau d'objets (hitboxes rectangles) simulant les murs physiques de l'arène.
   const w = canvas.width;
   const h = canvas.height;
   const ep = 25;
@@ -56,6 +57,7 @@ function initialiserObstacles() {
 mapObstacles = initialiserObstacles();
 
 function dessinerMap(ctx, canvas) {
+  // Dessine l'image d'arrière-plan de la carte ou applique une couleur unie si l'image n'est pas chargée.
   const mapImg = document.querySelector(".arena");
   if (mapImg && mapImg.complete) {
     ctx.drawImage(mapImg, 0, 0, canvas.width, canvas.height);
@@ -66,6 +68,7 @@ function dessinerMap(ctx, canvas) {
 }
 
 function debugDessinerHitboxes(ctx) {
+  // Outil de débogage pour afficher les zones de collision (configuré ici en transparent).
   ctx.fillStyle = "rgba(255, 0, 0, 0)";
   const tousLesObstacles = [...mapObstacles, ...boitesPosees];
   for (let obs of tousLesObstacles) ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
@@ -75,6 +78,7 @@ function debugDessinerHitboxes(ctx) {
 // 2. CONNEXION ET LANCEMENT DE LA PARTIE
 // ==========================================
 window.addEventListener("DOMContentLoaded", () => {
+  // Lit les configurations stockées par le lobby dans le sessionStorage.
   const mode = sessionStorage.getItem("modeJeu") || "1vs1";
   const skin = sessionStorage.getItem("monSkin") || "skin1";
   const equipe = sessionStorage.getItem("monEquipe") || "A";
@@ -82,14 +86,17 @@ window.addEventListener("DOMContentLoaded", () => {
   const overlayLobby = document.getElementById("overlay-lobby");
   if (overlayLobby) overlayLobby.classList.add("hidden");
 
+  // Communication : Indique au serveur Node.js l'entrée du client dans l'arène avec ses paramètres.
   socket.emit("rejoindre_arene", { mode: mode, skin: skin, equipe: equipe });
 });
 
+// Communication (Écouteur) : Reçoit la configuration initiale envoyée par le serveur pour générer les entités.
 socket.on("mise_a_jour_initiale_arene", (serveurJoueurs) => {
   for (let id in serveurJoueurs) {
     const sj = serveurJoueurs[id];
 
     if (id === socket.id) {
+      // Instancie l'objet local joueur contrôlable par l'utilisateur.
       if (!monJoueurLocal) {
         monJoueurLocal = new Player({
           startX: sj.x,
@@ -100,9 +107,10 @@ socket.on("mise_a_jour_initiale_arene", (serveurJoueurs) => {
           id: socket.id,
         });
       }
-      monJoueurLocal.equipe = sj.equipe; // On s'assure d'avoir la bonne équipe
+      monJoueurLocal.equipe = sj.equipe;
     } else {
       if (sj.isBot) {
+        // Instancie une entité autonome (Bot) rattachée à la partie.
         if (!monBot) {
           monBot = new Bot({
             startX: sj.x,
@@ -115,6 +123,7 @@ socket.on("mise_a_jour_initiale_arene", (serveurJoueurs) => {
         }
         monBot.equipe = sj.equipe;
       } else {
+        // Instancie les répliques des autres joueurs distants connectés.
         if (!listeJoueursAdverses[id]) {
           listeJoueursAdverses[id] = new Player({
             startX: sj.x,
@@ -131,6 +140,7 @@ socket.on("mise_a_jour_initiale_arene", (serveurJoueurs) => {
 
   partieEnCours = true;
 
+  // Lance un compte à rebours visuel commun en début de partie avant de libérer les contrôles physiques.
   if (!areneInitialisee) {
     areneInitialisee = true;
     const overlayCd = document.getElementById("overlay-countdown");
@@ -151,7 +161,7 @@ socket.on("mise_a_jour_initiale_arene", (serveurJoueurs) => {
         } else {
           clearInterval(timer);
           overlayCd.classList.add("hidden");
-          if (monJoueurLocal) monJoueurLocal.verrouille = false;
+          if (monJoueurLocal) monJoueurLocal.verrouille = false; // Déverrouille les contrôles du joueur local.
           if (monBot) monBot.verrouille = false;
         }
       }, 1000);
@@ -162,16 +172,18 @@ socket.on("mise_a_jour_initiale_arene", (serveurJoueurs) => {
 // ==========================================
 // 3. SYNCHRONISATION EN TEMPS RÉEL
 // ==========================================
+// Communication (Écouteur) : Reçoit en continu le tick réseau du serveur contenant la position et la santé de tous les joueurs.
 socket.on("mise_a_jour_joueurs", (serveurJoueurs) => {
   if (!partieEnCours) return;
   for (let id in serveurJoueurs) {
     const sj = serveurJoueurs[id];
 
     if (id === socket.id && monJoueurLocal) {
-      monJoueurLocal.health = sj.health;
+      monJoueurLocal.health = sj.health; // Met à jour la santé locale validée par l'autorité du serveur.
     } else if (monBot && id === monBot.id) {
       monBot.health = sj.health;
     } else if (listeJoueursAdverses[id]) {
+      // Synchronise instantanément la position et l'état des autres joueurs distants.
       listeJoueursAdverses[id].x = sj.x;
       listeJoueursAdverses[id].y = sj.y;
       listeJoueursAdverses[id].direction = sj.direction;
@@ -180,11 +192,13 @@ socket.on("mise_a_jour_joueurs", (serveurJoueurs) => {
     }
   }
 
+  // Nettoie et supprime de la mémoire locale les joueurs ayant quitté la partie sur le serveur.
   for (let id in listeJoueursAdverses) {
     if (!serveurJoueurs[id]) delete listeJoueursAdverses[id];
   }
 });
 
+// Communication (Écouteur) : Reçoit l'ordre de générer visuellement un projectile tiré par un opposant distant.
 socket.on("remote_tir", (data) => {
   if (partieEnCours && listeJoueursAdverses[data.ownerId]) {
     listeJoueursAdverses[data.ownerId].projectiles.push({
@@ -195,11 +209,13 @@ socket.on("remote_tir", (data) => {
   }
 });
 
+// Communication (Écouteur) : Ajoute un nouvel obstacle (boîte) validé et partagé par le serveur sur la carte.
 socket.on("nouvelle_boite_ajoutee", (boite) => boitesPosees.push(boite));
 
 // ==========================================
 // 4. FIN DE PARTIE : VICTOIRE D'ÉQUIPE
 // ==========================================
+// Communication (Écouteur) : Intercepte le signal d'arrêt du serveur et détermine l'écran de fin (Victoire/Défaite).
 socket.on("fin_de_partie", (data) => {
   partieEnCours = false;
   const overlayEnd = document.getElementById("overlay-endgame");
@@ -207,7 +223,7 @@ socket.on("fin_de_partie", (data) => {
 
   if (!overlayEnd || !imgEnd || !monJoueurLocal) return;
 
-  // 🔴 VÉRIFICATION INFAILLIBLE : Si MON équipe est l'équipe gagnante !
+  // Compare l'équipe locale avec l'équipe déclarée gagnante par le serveur pour charger le bon actif graphique.
   if (monJoueurLocal.equipe === data.equipeGagnante) {
     imgEnd.src = `/frontend/assets/party/win/win_${monJoueurLocal.skin}.png`;
   } else {
@@ -243,6 +259,7 @@ const piliersForeground = [
 ];
 
 function dessinerPremierPlan(ctx) {
+  // Affiche les décors de premier plan au-dessus des joueurs pour créer un effet de profondeur (perspective).
   for (let p of piliersForeground) {
     const img = document.getElementById(p.id);
     if (img) ctx.drawImage(img, p.x, p.y, p.w, p.h);
@@ -254,6 +271,7 @@ function dessinerPremierPlan(ctx) {
 }
 
 function gameLoop() {
+  // Boucle d'animation principale cadencée sur le rafraîchissement du moniteur via requestAnimationFrame.
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   dessinerMap(ctx, canvas);
   debugDessinerHitboxes(ctx);
@@ -263,6 +281,7 @@ function gameLoop() {
     const tableauCibles = [...Object.values(listeJoueursAdverses)];
     if (monBot) tableauCibles.push(monBot);
 
+    // Déclenche l'actualisation interne de la physique, des projectiles et des graphiques de chaque entité.
     if (monJoueurLocal)
       monJoueurLocal.update(ctx, tableauCibles, tousLesObstacles);
     if (monBot && !monBot.isDead()) monBot.updateAI(ctx, tousLesObstacles);
@@ -271,7 +290,7 @@ function gameLoop() {
       listeJoueursAdverses[id].update(ctx, [], tousLesObstacles);
     }
 
-    dessinerPremierPlan(ctx);
+    dessinerPremierPlan(ctx); // Rendu des éléments superposés.
   }
   requestAnimationFrame(gameLoop);
 }

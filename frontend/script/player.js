@@ -16,7 +16,7 @@ class Player {
     this.socket = socket;
     this.id = id;
     this.skin = skin;
-    this.verrouille = true; // Minuteur
+    this.verrouille = true; // Empêche les actions durant le décompte initial.
 
     this.spritePath = `/frontend/assets/man/${skin}/`;
     this.sprite = new Image();
@@ -40,6 +40,7 @@ class Player {
   }
 
   _setupKeyboardListeners() {
+    // Enregistre les pressions de touches pour le déplacement et les actions de tir/boîte.
     window.addEventListener("keydown", (e) => {
       if (this.health <= 0 || this.verrouille) return;
       const key = e.key.toLowerCase();
@@ -53,10 +54,11 @@ class Player {
       }
       if (key === "z") this.pressed.haut = true;
       if (key === "s") this.pressed.bas = true;
-      if (key === " " && !this.shotCooldown) this.tirerManuel();
+      if (e.key === " " && !this.shotCooldown) this.tirerManuel(); // Utilise e.key directement pour capturer l'espace.
       if (key === "e") this.demanderPoseBoite();
     });
 
+    // Réinitialise l'état des touches de direction au relâchement.
     window.addEventListener("keyup", (e) => {
       const key = e.key.toLowerCase();
       if (key === "d") this.pressed.droite = false;
@@ -67,6 +69,7 @@ class Player {
   }
 
   tirerManuel() {
+    // Crée un projectile localement et envoie l'action au serveur via websocket.
     this.shotCooldown = true;
     const pX = this.direction === "droite" ? this.x + 50 : this.x + 10;
     const proj = {
@@ -82,12 +85,14 @@ class Player {
   }
 
   demanderPoseBoite() {
+    // Émet une requête réseau d'intention de pose de boîte devant le joueur.
     const boiteX = this.direction === "droite" ? this.x + 50 : this.x - 50;
     if (this.socket && !this.isBot)
       this.socket.emit("poser_boite", { x: boiteX, y: this.y + 12 });
   }
 
   checkCollision(futurX, futurY, obstacles) {
+    // Détecte les collisions par boîte englobante (AABB) avec la liste des obstacles.
     const hitboxW = 30;
     const hitboxH = 40;
     const offsetX = 17;
@@ -109,57 +114,53 @@ class Player {
   }
 
   updateProjectiles(ctx, adversaires, obstacles) {
-    for (let i = this.projectiles.length - 1; i >= 0; i--) {
-      let p = this.projectiles[i];
-      p.x +=
-        p.direction === "droite" ? this.projectileSpeed : -this.projectileSpeed;
-      ctx.fillStyle = "#ffcc00";
-      ctx.fillRect(p.x, p.y, 10, 4);
-      let detruit = false;
+  // Gère le déplacement, les impacts sur l'environnement et l'envoi des dégâts réseau.
+  for (let i = this.projectiles.length - 1; i >= 0; i--) {
+    let p = this.projectiles[i];
+    p.x += p.direction === "droite" ? this.projectileSpeed : -this.projectileSpeed;
+    
+    ctx.fillStyle = "#ffcc00";
+    ctx.fillRect(p.x, p.y, 10, 4);
+    let detruit = false;
 
-      for (let obs of obstacles) {
-        if (
-          p.x < obs.x + obs.w &&
-          p.x + 10 > obs.x &&
-          p.y < obs.y + obs.h &&
-          p.y + 4 > obs.y
-        ) {
+    // Collision avec les murs/boîtes
+    for (let obs of obstacles) {
+      if (p.x < obs.x + obs.w && p.x + 10 > obs.x && p.y < obs.y + obs.h && p.y + 4 > obs.y) {
+        this.projectiles.splice(i, 1);
+        detruit = true;
+        break;
+      }
+    }
+    if (detruit) continue;
+
+    // Collision universelle avec les adversaires (Fonctionne pour le Joueur ET pour le Bot)
+    if (adversaires) {
+      for (let adv of adversaires) {
+        if (!adv.isDead() && p.x > adv.x && p.x < adv.x + 64 && p.y > adv.y && p.y < adv.y + 64) {
+          
+          // Seul le propriétaire du tir (ou l'instance locale du bot) envoie le signal de dégât
+          if (this.socket && (this.isLocal || this.isBot)) {
+            this.socket.emit("infliger_degat", {
+              cibleId: adv.id,
+              montant: this.projectileDamage,
+              tireurId: p.ownerId || this.id // Utilise l'ID réel enregistré dans le projectile
+            });
+          }
           this.projectiles.splice(i, 1);
           detruit = true;
           break;
         }
       }
-      if (detruit) continue;
-
-      if (this.isLocal && adversaires) {
-        for (let adv of adversaires) {
-          if (
-            !adv.isDead() &&
-            p.x > adv.x &&
-            p.x < adv.x + 64 &&
-            p.y > adv.y &&
-            p.y < adv.y + 64
-          ) {
-            if (this.socket) {
-              this.socket.emit("infliger_degat", {
-                cibleId: adv.id,
-                montant: this.projectileDamage,
-                tireurId: this.id,
-                tireurIsBot: this.isBot,
-              });
-            }
-            this.projectiles.splice(i, 1);
-            detruit = true;
-            break;
-          }
-        }
-      }
-      if (!detruit && (p.x < 0 || p.x > ctx.canvas.width))
-        this.projectiles.splice(i, 1);
+    }
+    
+    if (!detruit && (p.x < 0 || p.x > ctx.canvas.width)) {
+      this.projectiles.splice(i, 1);
     }
   }
+}
 
   update(ctx, adversaires = [], obstacles = []) {
+    // Met à jour la position locale, envoie les déplacements au serveur et dessine l'entité.
     if (this.health <= 0) return;
 
     if (this.isLocal && !this.verrouille) {
@@ -234,6 +235,7 @@ class Player {
   }
 
   startAnim() {
+    // Alterne périodiquement les frames de texture du sprite pour créer l'animation de marche.
     if (this.timerAnim !== null) return;
     this.timerAnim = setInterval(() => {
       this.numFrame = this.numFrame >= this.maxFrames ? 1 : this.numFrame + 1;
@@ -242,6 +244,7 @@ class Player {
   }
 
   stopAnim() {
+    // Interrompt le cycle de l'animation de course et réapplique le sprite statique.
     if (this.timerAnim === null) return;
     clearInterval(this.timerAnim);
     this.timerAnim = null;
@@ -250,6 +253,7 @@ class Player {
   }
 
   _drawHealthBar(ctx) {
+    // Calcule et dessine la barre de vie bicolore proportionnelle au-dessus du joueur.
     const grandeur = 50;
     const barreX = this.x + 32 - grandeur / 2;
     const pct = Math.max(0, this.health / this.maxHealth);
@@ -258,7 +262,9 @@ class Player {
     ctx.fillStyle = "#32cd32";
     ctx.fillRect(barreX, this.y - 12, grandeur * pct, 6);
   }
+
   isDead() {
+    // Retourne un indicateur booléen spécifiant si l'entité n'a plus de points de vie.
     return this.health <= 0;
   }
 }

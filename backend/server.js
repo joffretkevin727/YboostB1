@@ -171,45 +171,74 @@ io.on("connection", (socket) => {
   });
 
   socket.on("infliger_degat", (data) => {
-    const cible = joueursEnJeu[data.cibleId];
-    const tireur = joueursEnJeu[socket.id] || joueursEnJeu[data.tireurId];
+  const cible = joueursEnJeu[data.cibleId];
+  // Priorité absolue à l'ID envoyé par le client (permet d'identifier le BOT)
+  const tireur = joueursEnJeu[data.tireurId] || joueursEnJeu[socket.id]; 
 
-    if (cible && tireur && cible.health > 0) {
-      if (cible.equipe === tireur.equipe) return; // Pas de tir ami
+  if (cible && tireur && cible.health > 0) {
+    if (cible.equipe === tireur.equipe) return; // Bloque le tir ami si même équipe.
 
-      cible.health -= data.montant;
-      if (cible.health <= 0) cible.health = 0;
+    cible.health -= data.montant;
+    if (cible.health <= 0) cible.health = 0;
 
-      io.emit("mise_a_jour_joueurs", joueursEnJeu);
+    io.emit("mise_a_jour_joueurs", joueursEnJeu);
 
-      // On compte TOUS les joueurs dont les HP sont supérieurs à 0 dans chaque équipe
-      const nbEnVieA = Object.values(joueursEnJeu).filter(
-        (j) => j.equipe === "A" && j.health > 0,
-      ).length;
-      const nbEnVieB = Object.values(joueursEnJeu).filter(
-        (j) => j.equipe === "B" && j.health > 0,
-      ).length;
+    const nbEnVieA = Object.values(joueursEnJeu).filter((j) => j.equipe === "A" && j.health > 0).length;
+    const nbEnVieB = Object.values(joueursEnJeu).filter((j) => j.equipe === "B" && j.health > 0).length;
 
-      // La partie s'arrête si et seulement si l'équipe A ou l'équipe B est totalement à 0
-      if (nbEnVieA === 0 || nbEnVieB === 0) {
-        const equipeGagnante = nbEnVieA === 0 ? "B" : "A";
+    if (nbEnVieA === 0 || nbEnVieB === 0) {
+      const equipeGagnante = nbEnVieA === 0 ? "B" : "A";
+      io.emit("fin_de_partie", { equipeGagnante: equipeGagnante });
+      boitesDynamiques = [];
+      joueursEnJeu = {};
+    }
+  }
+});
 
-        // On envoie le résultat final à tout le monde
-        io.emit("fin_de_partie", { equipeGagnante: equipeGagnante });
-        boitesDynamiques = [];
-        joueursEnJeu = {};
+socket.on("poser_boite", (data) => {
+  const j = joueursEnJeu[socket.id];
+  if (j && j.mursPoses < 5 && j.health > 0) {
+    
+    const boiteW = 40;
+    const boiteH = 40;
+    const bGauche = data.x;
+    const bDroite = data.x + boiteW;
+    const bHaut = data.y;
+    const bBas = data.y + boiteH;
+
+    const joueurHitboxW = 30;
+    const joueurHitboxH = 40;
+    const offsetX = 17;
+    const offsetY = 20;
+
+    // Zone de sécurité supplémentaire en pixels tout autour du joueur
+    const marge = 15; 
+
+    let espaceOccupe = false;
+
+    for (let id in joueursEnJeu) {
+      const joueur = joueursEnJeu[id];
+      if (joueur.health <= 0) continue; 
+
+      // On applique la marge de sécurité directement sur les quatre côtés de la hitbox du joueur
+      const jGauche = joueur.x + offsetX - marge;
+      const jDroite = joueur.x + offsetX + joueurHitboxW + marge;
+      const jHaut = joueur.y + offsetY - marge;
+      const jBas = joueur.y + offsetY + joueurHitboxH + marge;
+
+      if (bGauche < jDroite && bDroite > jGauche && bHaut < jBas && bBas > jHaut) {
+        espaceOccupe = true; 
+        break;
       }
     }
-  });
 
-  socket.on("poser_boite", (data) => {
-    const j = joueursEnJeu[socket.id];
-    if (j && j.mursPoses < 5 && j.health > 0) {
-      boitesDynamiques.push({ x: data.x, y: data.y, w: 40, h: 40 });
+    if (!espaceOccupe) {
+      boitesDynamiques.push({ x: data.x, y: data.y, w: boiteW, h: boiteH });
       j.mursPoses++;
-      io.emit("nouvelle_boite_ajoutee", { x: data.x, y: data.y, w: 40, h: 40 });
+      io.emit("nouvelle_boite_ajoutee", { x: data.x, y: data.y, w: boiteW, h: boiteH });
     }
-  });
+  }
+});
 
   socket.on("disconnect", () => {
     if (lobbyJoueurs[socket.id]) {
